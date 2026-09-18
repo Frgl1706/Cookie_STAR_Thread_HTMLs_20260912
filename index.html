@@ -349,359 +349,140 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     </div>
 </dialog>
 
-<script>
-let dbData=[];
-let searchMode='and';
-let currentReplyTarget=null;
-let searchTimer=null;
-
+<script>const WORKER_SOURCE=`let texts=[],threads=[],A=[],B=[],E=[],T=[],N=[],D=[],NAME=[],hits=[],queryNo=0;
+const norm=(s,fold)=>fold?String(s??'').normalize('NFKC').toLowerCase():String(s??'').normalize('NFKC');
+const words=s=>Array.from(String(s??'').matchAll(/"([^"]+)"|(\S+)/g),m=>m[1]||m[2]);
+function parse(s,file){
+ texts.push(s);let tid=-1,prev=-1;
+ const re=/^={20,}\n([^\n]+)\n(https?:\/\/[^\n]+)\n={20,}[^\n]*|^(\d{1,6})\s+名前：([^\n]*)/gm;let m;
+ while((m=re.exec(s))){
+  if(prev>=0)E[prev]=m.index;
+  if(m[1]){if(tid>=0)threads[tid].last=A.length;tid=threads.length;threads.push({title:m[1],url:m[2].trim(),file,first:A.length,last:A.length});prev=-1;}
+  else if(tid>=0){prev=A.length;A.push(m.index);B.push(re.lastIndex+1);E.push(s.length);T.push(tid);N.push(parseInt(m[3],10)||0);NAME.push((m[4]||'').trim());let dt=m[0].match(/(?:：|\s)(\d{4})[\/-](\d{2})[\/-](\d{2})/);D.push(dt?+(dt[1]+dt[2]+dt[3]):0);}
+ }
+ if(tid>=0)threads[tid].last=A.length;
+}
+function addStructured(arr){
+ if(!Array.isArray(arr))arr=[arr];
+ for(const th of arr){
+  const title=String(th?.title??th?.name??'無題のスレッド');
+  const url=String(th?.url??'');
+  const responses=Array.isArray(th?.responses)?th.responses:[];
+  let text='============================================================\n'+title+'\n'+url+'\n============================================================\n\n';
+  for(let i=0;i<responses.length;i++){
+   const r=responses[i]||{}; const num=Number(r.number)||i+1; const name=String(r.name??'名無しさん'); const date=String(r.date??'');
+   text+=String(num).padStart(4,'0')+' 名前：'+name+(date?' ：'+date:'')+'\n'+String(r.body??'')+'\n';
+  }
+  parse(text,texts.length);
+ }
+}
+function rec(i){let t=threads[T[i]],s=texts[t.file];return {i,t:T[i],num:N[i],name:NAME[i],header:s.slice(A[i],B[i]-1),body:s.slice(B[i],E[i]).trimEnd(),date:D[i]?String(D[i]):'',title:t.title,url:t.url};}
+function sendPage(page,size){
+ const total=hits.length;const safeSize=Math.max(1,Math.min(3000,Number(size)||300));
+ const p=Math.max(0,Math.min(page,Math.max(0,Math.ceil(total/safeSize)-1)));
+ postMessage({type:'page',page:p,total,rows:hits.slice(p*safeSize,(p+1)*safeSize).map(rec)});
+}
+function search(q){
+ const token=++queryNo,start=performance.now(),out=[],threadSet=new Set();
+ const mainTerms=words(q.q).map(x=>norm(x,q.fold));
+ const include=words(q.include).map(x=>norm(x,q.fold));
+ const exclude=words(q.exclude).map(x=>norm(x,q.fold));
+ const titleFilter=norm(q.title,q.fold),nameFilter=norm(q.name,q.fold),phrase=norm(q.phrase,q.fold);
+ const from=+(String(q.from||'').replaceAll('-','')),to=+(String(q.to||'').replaceAll('-',''));
+ const minRes=q.minRes==null||q.minRes===''?null:Number(q.minRes),maxRes=q.maxRes==null||q.maxRes===''?null:Number(q.maxRes);
+ const bodyScope=q.body!==false,titleScope=q.titleScope!==false,nameScope=q.nameScope===true;
+ for(let i=0;i<A.length;i++){
+  if(i%10000===0){postMessage({type:'searchProgress',value:A.length?i/A.length:1}); if(token!==queryNo)return;}
+  const th=threads[T[i]], rname=NAME[i]||'';
+  if(titleFilter&&!norm(th.title,q.fold).includes(titleFilter))continue;
+  if(nameFilter&&!norm(rname,q.fold).includes(nameFilter))continue;
+  const n=N[i];
+  if(minRes!==null&&(!Number.isFinite(n)||n<minRes))continue;
+  if(maxRes!==null&&(!Number.isFinite(n)||n>maxRes))continue;
+  if(from&&(D[i]===0||D[i]<from))continue;
+  if(to&&(D[i]===0||D[i]>to))continue;
+  const body=norm(texts[th.file].slice(B[i],E[i]),q.fold), title=norm(th.title,q.fold), name=norm(rname,q.fold);
+  const hay=(bodyScope?body+'\n':'')+(titleScope?title+'\n':'')+(nameScope?name:'');
+  if(mainTerms.length){
+   if(q.mode==='and'&&!mainTerms.every(w=>hay.includes(w)))continue;
+   if(q.mode==='or'&&!mainTerms.some(w=>hay.includes(w)))continue;
+   if(q.mode==='not'&&mainTerms.some(w=>hay.includes(w)))continue;
+  }
+  if(include.length&&!include.every(w=>hay.includes(w)))continue;
+  if(exclude.some(w=>hay.includes(w)))continue;
+  if(phrase&&!hay.includes(phrase))continue;
+  out.push(i);threadSet.add(T[i]);
+ }
+ if(token!==queryNo)return;
+ if(q.sort==='new'||q.sort==='old'){const sign=q.sort==='new'?-1:1;out.sort((a,b)=>{if(!D[a])return !D[b]?a-b:1;if(!D[b])return -1;return sign*(D[a]-D[b]||a-b);});}
+ hits=out;
+ const limit=Number(q.limit)||0;const shown=limit>0?Math.min(limit,hits.length):hits.length;
+ const renderHits=limit>0?hits.slice(0,limit):hits;
+ postMessage({type:'found',total:hits.length,shown,threads:threadSet.size,ms:Math.round(performance.now()-start),q,rows:renderHits.map(rec)});
+}
+onmessage=async({data:m})=>{try{
+ if(m.type==='load'){
+  let bytes=Uint8Array.from(atob(m.b64),c=>c.charCodeAt(0));let buf=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();parse(new TextDecoder().decode(buf).replace(/\r\n?/g,'\n'),texts.length);postMessage({type:'loaded',count:A.length});
+ }else if(m.type==='loadStructured'){addStructured(m.data);postMessage({type:'loaded',count:A.length});}
+ else if(m.type==='finish'){
+  A=Uint32Array.from(A);B=Uint32Array.from(B);E=Uint32Array.from(E);T=Uint32Array.from(T);N=Uint32Array.from(N);D=Uint32Array.from(D);postMessage({type:'ready',count:A.length,threads:threads.length});
+ }else if(m.type==='search')search(m.q);
+ else if(m.type==='cancel'){queryNo++;postMessage({type:'cancelled'});}
+ }catch(e){postMessage({type:'error',message:e?.stack||e?.message||String(e)});}};`;
+const worker=new Worker(URL.createObjectURL(new Blob([WORKER_SOURCE],{type:'text/javascript'})));
+let dbReady=false,dbCount=0,dbThreadsCount=0,searchTimer=null,currentReplyTarget=null;
 let commentsData=[
-    {id:1,parentId:null,author:"語録研究者",text:"本スレの過去ログ検索が快適で助かります！",time:"2026/09/18 10:15",likes:5,dislikes:0},
-    {id:2,parentId:1,author:"名無しさん",text:"@語録研究者 本当に便利ですね。AND検索の挙動もスムーズです。",time:"2026/09/18 11:02",likes:2,dislikes:0}
+ {id:1,parentId:null,author:'語録研究者',text:'本スレの過去ログ検索が快適で助かります！',time:'2026/09/18 10:15',likes:5,dislikes:0},
+ {id:2,parentId:1,author:'名無しさん',text:'@語録研究者 本当に便利ですね。AND検索の挙動もスムーズです。',time:'2026/09/18 11:02',likes:2,dislikes:0}
 ];
-
-const $=id=>document.getElementById(id);
-const body=document.body;
+const $=id=>document.getElementById(id),body=document.body;
 const searchInput=$('searchInput'),modeSlider=$('modeSlider'),resultsList=$('resultsList');
 const resultCount=$('resultCount'),threadCount=$('threadCount'),searchTime=$('searchTime');
 const fold=$('fold'),highlight=$('highlight');
 const includeWords=$('includeWords'),excludeWords=$('excludeWords'),titleFilter=$('titleFilter'),nameFilter=$('nameFilter');
 const minRes=$('minRes'),maxRes=$('maxRes'),fromDate=$('fromDate'),toDate=$('toDate');
 const scopeBody=$('scopeBody'),scopeTitle=$('scopeTitle'),scopeName=$('scopeName');
-const exactPhrase=$('exactPhrase'),resultLimit=$('resultLimit');
+const exactPhrase=$('exactPhrase'),resultLimit=$('resultLimit'),sortOrder=$('sortOrder');
 const detailPanel=$('detailPanel'),detailToggle=$('detailToggle'),filterSummary=$('filterSummary'),activeFilterLabel=$('activeFilterLabel');
-
-function normalizeText(value){
-    let s=String(value??'').normalize('NFKC');
-    return fold.checked?s.toLowerCase():s;
-}
-function splitWords(value){
-    return normalizeText(value).split(/\s+/).map(s=>s.trim()).filter(Boolean);
-}
-function escapeHtml(str){
-    return String(str??'').replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-}
-function escapeRegExp(str){return String(str).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
-
-function parseDateValue(value){
-    const s=String(value??'').trim();
-    if(!s)return null;
-    const m=s.match(/(20\d{2})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
-    if(!m)return null;
-    return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
-}
-
-function currentFilters(){
-    return {
-        include:splitWords(includeWords.value),
-        exclude:splitWords(excludeWords.value),
-        title:normalizeText(titleFilter.value.trim()),
-        name:normalizeText(nameFilter.value.trim()),
-        minRes:minRes.value===''?null:Number(minRes.value),
-        maxRes:maxRes.value===''?null:Number(maxRes.value),
-        from:fromDate.value||'',
-        to:toDate.value||'',
-        body:scopeBody.checked,
-        titleScope:scopeTitle.checked,
-        nameScope:scopeName.checked,
-        phrase:normalizeText(exactPhrase.value.trim()),
-        limit:Number(resultLimit.value)||0
-    };
-}
-
-function makeSearchText(res,thread,f){
-    const parts=[];
-    if(f.body)parts.push(normalizeText(res.body||''));
-    if(f.titleScope)parts.push(normalizeText(thread.title||''));
-    if(f.nameScope)parts.push(normalizeText(res.name||''));
-    return parts.join('\n');
-}
-
-function matchesDetailed(res,thread,f){
-    const title=normalizeText(thread.title||'');
-    const name=normalizeText(res.name||'');
-    const bodyText=normalizeText(res.body||'');
-    const combined=makeSearchText(res,thread,f);
-
-    if(f.title && !title.includes(f.title))return false;
-    if(f.name && !name.includes(f.name))return false;
-
-    const number=Number(res.number);
-    if(f.minRes!==null && Number.isFinite(number) && number<f.minRes)return false;
-    if(f.maxRes!==null && Number.isFinite(number) && number>f.maxRes)return false;
-
-    const d=parseDateValue(res.date);
-    if(f.from && d && d<f.from)return false;
-    if(f.to && d && d>f.to)return false;
-    if(f.from && !d)return false;
-    if(f.to && !d)return false;
-
-    if(f.phrase && !combined.includes(f.phrase))return false;
-    if(f.include.some(word=>!combined.includes(word)))return false;
-    if(f.exclude.some(word=>combined.includes(word)))return false;
-
-    return true;
-}
-
-function buildKeywords(){
-    const main=splitWords(searchInput.value);
-    const f=currentFilters();
-    return [...new Set([...main,...f.include])];
-}
-
-function matchesMainQuery(text,keywords){
-    if(keywords.length===0)return true;
-    if(searchMode==='and')return keywords.every(k=>text.includes(k));
-    if(searchMode==='or')return keywords.some(k=>text.includes(k));
-    return keywords.every(k=>!text.includes(k));
-}
-
-function renderResults(results,keywords){
-    if(!results.length){
-        resultsList.innerHTML='<div class="loading-note">該当するレスが見つかりませんでした</div>';
-        return;
-    }
-    resultsList.innerHTML=results.map(res=>{
-        let bodyText=escapeHtml(res.body);
-        if(highlight.checked){
-            keywords.filter(Boolean).sort((a,b)=>b.length-a.length).forEach(kw=>{
-                bodyText=bodyText.replace(new RegExp(`(${escapeRegExp(escapeHtml(kw))})`,'gi'),'<mark>$1</mark>');
-            });
-        }
-        return `<div class="result-card">
-            <div class="thread-title">${escapeHtml(res.threadTitle)}</div>
-            <div class="res-meta">${escapeHtml(String(res.resNum))} : ${escapeHtml(res.name)} ${escapeHtml(res.date)}</div>
-            <div class="res-body">${bodyText}</div>
-        </div>`;
-    }).join('');
-}
-
-function updateFilterSummary(f){
-    const parts=[];
-    if(f.include.length)parts.push(`含める語:${f.include.join(', ')}`);
-    if(f.exclude.length)parts.push(`除外:${f.exclude.join(', ')}`);
-    if(f.title)parts.push('タイトル指定');
-    if(f.name)parts.push('名前指定');
-    if(f.minRes!==null||f.maxRes!==null)parts.push('レス番号指定');
-    if(f.from||f.to)parts.push('日付指定');
-    if(f.phrase)parts.push('完全一致フレーズ');
-    const scopes=[];
-    if(f.body)scopes.push('本文');if(f.titleScope)scopes.push('タイトル');if(f.nameScope)scopes.push('名前');
-    if(scopes.length)parts.push(`対象:${scopes.join('/')}`);
-    filterSummary.textContent=parts.length?`適用条件：${parts.join(' / ')}`:'詳細条件は未設定です。';
-    activeFilterLabel.textContent=parts.length?'絞り込み中':'';
-}
-
-function performSearch(){
-    const query=searchInput.value.trim();
-    const f=currentFilters();
-    updateFilterSummary(f);
-
-    if(dbData.length===0){
-        resultsList.innerHTML='<div class="loading-note">データがセットされていません</div>';
-        resultCount.textContent='0';threadCount.textContent='0';searchTime.textContent='0.00';
-        return;
-    }
-    if(!query && !f.include.length && !f.exclude.length && !f.title && !f.name && !f.phrase &&
-       f.minRes===null && f.maxRes===null && !f.from && !f.to){
-        resultsList.innerHTML='<div class="loading-note">検索キーワードまたは絞り込み条件を入力してください</div>';
-        resultCount.textContent='0';threadCount.textContent='0';searchTime.textContent='0.00';
-        return;
-    }
-
-    if(!f.body&&!f.titleScope&&!f.nameScope){
-        resultsList.innerHTML='<div class="loading-note">検索対象を1つ以上選択してください</div>';
-        return;
-    }
-
-    const start=performance.now();
-    const keywords=buildKeywords();
-    const matched=[];
-    const threads=new Set();
-
-    dbData.forEach((thread,tIdx)=>{
-        const responses=Array.isArray(thread.responses)?thread.responses:[];
-        responses.forEach((res,rIdx)=>{
-            const text=makeSearchText(res,thread,f);
-            if(!matchesMainQuery(text,keywords))return;
-            if(!matchesDetailed(res,thread,f))return;
-
-            matched.push({
-                threadTitle:thread.title||'無題のスレッド',
-                resNum:res.number??(rIdx+1),
-                name:res.name||'風吹けば名無し',
-                date:res.date||'',
-                body:res.body||'',
-                id:`${tIdx}-${rIdx}`
-            });
-            threads.add(tIdx);
-        });
-    });
-
-    if($('sortOrder').value==='asc')matched.reverse();
-
-    const total=matched.length;
-    const limited=f.limit>0?matched.slice(0,f.limit):matched;
-    const elapsed=((performance.now()-start)/1000).toFixed(3);
-
-    resultCount.textContent=total.toLocaleString();
-    threadCount.textContent=threads.size.toLocaleString();
-    searchTime.textContent=elapsed;
-    renderResults(limited,keywords);
-
-    if(f.limit>0&&total>f.limit){
-        activeFilterLabel.textContent=`${f.limit.toLocaleString()}件まで表示 / 全${total.toLocaleString()}件`;
-    }
-}
-
-function scheduleSearch(){
-    clearTimeout(searchTimer);
-    searchTimer=setTimeout(performSearch,120);
-}
-
-function setMode(mode){
-    searchMode=mode;
-    modeSlider.dataset.mode=mode;
-    ['and','or','not'].forEach(x=>$('opt'+x[0].toUpperCase()+x.slice(1)).classList.toggle('active',x===mode));
-    performSearch();
-}
-modeSlider.addEventListener('click',()=>{
-    const next={and:'or',or:'not',not:'and'}[searchMode];setMode(next);
-});
-modeSlider.addEventListener('keydown',e=>{
-    if(e.key==='Enter'||e.key===' '){e.preventDefault();const next={and:'or',or:'not',not:'and'}[searchMode];setMode(next)}
-});
-
-detailToggle.addEventListener('click',()=>{
-    const open=detailPanel.classList.toggle('open');
-    detailToggle.classList.toggle('open',open);
-    detailToggle.setAttribute('aria-expanded',String(open));
-});
+function normalizeText(v){const s=String(v??'').normalize('NFKC');return fold.checked?s.toLowerCase():s}
+function splitWords(v){return normalizeText(v).split(/\s+/).map(x=>x.trim()).filter(Boolean)}
+function escapeHtml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+function currentFilters(){return {include:splitWords(includeWords.value),exclude:splitWords(excludeWords.value),title:normalizeText(titleFilter.value.trim()),name:normalizeText(nameFilter.value.trim()),minRes:minRes.value===''?null:Number(minRes.value),maxRes:maxRes.value===''?null:Number(maxRes.value),from:fromDate.value||'',to:toDate.value||'',body:scopeBody.checked,titleScope:scopeTitle.checked,nameScope:scopeName.checked,phrase:normalizeText(exactPhrase.value.trim()),limit:Number(resultLimit.value)||0}}
+function updateFilterSummary(f){const p=[];if(f.include.length)p.push('含める:'+f.include.join(', '));if(f.exclude.length)p.push('除外:'+f.exclude.join(', '));if(f.title)p.push('タイトル指定');if(f.name)p.push('名前指定');if(f.minRes!==null||f.maxRes!==null)p.push('レス番号指定');if(f.from||f.to)p.push('日付指定');if(f.phrase)p.push('完全一致');const s=[];if(f.body)s.push('本文');if(f.titleScope)s.push('タイトル');if(f.nameScope)s.push('名前');if(s.length)p.push('対象:'+s.join('/'));filterSummary.textContent=p.length?'適用条件：'+p.join(' / '):'詳細条件は未設定です。';activeFilterLabel.textContent=''}
+function buildRequest(){const f=currentFilters();return {q:searchInput.value.trim(),include:f.include.join(' '),exclude:f.exclude.join(' '),title:f.title,name:f.name,minRes:f.minRes,maxRes:f.maxRes,from:f.from,to:f.to,body:f.body,titleScope:f.titleScope,nameScope:f.nameScope,phrase:f.phrase,limit:f.limit,mode:searchMode,fold:fold.checked,sort:sortOrder.value}}
+function renderResults(rows,keywords,total,limit){if(!rows.length){resultsList.innerHTML='<div class="loading-note">該当するレスが見つかりませんでした</div>';return}resultsList.innerHTML=rows.map(r=>{let b=escapeHtml(r.body);if(highlight.checked){keywords.filter(Boolean).sort((a,c)=>c.length-a.length).forEach(k=>{b=b.replace(new RegExp('('+escapeRegExp(escapeHtml(k))+')','gi'),'<mark>$1</mark>')})}return `<div class="result-card"><div class="thread-title">${escapeHtml(r.title||'無題のスレッド')}</div><div class="res-meta">${escapeHtml(String(r.num||''))} : ${escapeHtml(r.name||'名無しさん')} ${escapeHtml(r.date||'')}</div><div class="res-body">${b}</div></div>`}).join('');if(limit>0&&total>limit)activeFilterLabel.textContent=`${limit.toLocaleString()}件まで表示 / 全${total.toLocaleString()}件`}
+function performSearch(){if(!dbReady){resultsList.innerHTML='<div class="loading-note">スレッドデータを読み込み中です…</div>';return}const f=currentFilters();updateFilterSummary(f);const main=splitWords(searchInput.value);if(!main.length&&!f.include.length&&!f.exclude.length&&!f.title&&!f.name&&!f.phrase&&f.minRes===null&&f.maxRes===null&&!f.from&&!f.to){resultsList.innerHTML='<div class="loading-note">検索キーワードまたは絞り込み条件を入力してください</div>';resultCount.textContent='0';threadCount.textContent='0';searchTime.textContent='0.00';return}if(!f.body&&!f.titleScope&&!f.nameScope){resultsList.innerHTML='<div class="loading-note">検索対象を1つ以上選択してください</div>';return}resultsList.innerHTML='<div class="loading-note">検索中…</div>';worker.postMessage({type:'search',q:buildRequest()})}
+function scheduleSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(performSearch,180)}
+function setMode(m){searchMode=m;modeSlider.dataset.mode=m;['and','or','not'].forEach(x=>{const id='opt'+x[0].toUpperCase()+x.slice(1),el=$(id);if(el)el.classList.toggle('active',x===m)});performSearch()}
+let searchMode='and';
+modeSlider.addEventListener('click',()=>setMode({and:'or',or:'not',not:'and'}[searchMode]));
+modeSlider.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setMode({and:'or',or:'not',not:'and'}[searchMode])}});
+detailToggle.addEventListener('click',()=>{const open=detailPanel.classList.toggle('open');detailToggle.classList.toggle('open',open);detailToggle.setAttribute('aria-expanded',String(open))});
 $('applyFiltersBtn').addEventListener('click',performSearch);
-$('resetFiltersBtn').addEventListener('click',()=>{
-    [includeWords,excludeWords,titleFilter,nameFilter,minRes,maxRes,fromDate,toDate,exactPhrase].forEach(el=>el.value='');
-    scopeBody.checked=true;scopeTitle.checked=true;scopeName.checked=false;
-    resultLimit.value='300';
-    performSearch();
-});
-[searchInput,includeWords,excludeWords,titleFilter,nameFilter,minRes,maxRes,fromDate,toDate,exactPhrase].forEach(el=>el.addEventListener('input',scheduleSearch));
-[fold,highlight,scopeBody,scopeTitle,scopeName].forEach(el=>el.addEventListener('change',scheduleSearch));
-$('resultLimit').addEventListener('change',performSearch);
-$('sortOrder').addEventListener('change',performSearch);
-
+$('resetFiltersBtn').addEventListener('click',()=>{[includeWords,excludeWords,titleFilter,nameFilter,minRes,maxRes,fromDate,toDate,exactPhrase].forEach(e=>e.value='');scopeBody.checked=true;scopeTitle.checked=true;scopeName.checked=false;resultLimit.value='300';performSearch()});
+[searchInput,includeWords,excludeWords,titleFilter,nameFilter,minRes,maxRes,fromDate,toDate,exactPhrase].forEach(e=>e.addEventListener('input',scheduleSearch));
+[fold,highlight,scopeBody,scopeTitle,scopeName].forEach(e=>e.addEventListener('change',scheduleSearch));
+resultLimit.addEventListener('change',performSearch);sortOrder.addEventListener('change',performSearch);
 $('darkBtn').addEventListener('click',()=>body.classList.toggle('dark'));
-$('helpBtn').addEventListener('click',()=>$('helpDialog').showModal());
-$('closeHelpBtn').addEventListener('click',()=>$('helpDialog').close());
-
-const navs=[$('navHomeTab'),$('navCommentsTab'),$('navSettingsTab')];
-const tabs=[$('tabHome'),$('tabComments'),$('tabSettings')];
-function switchTab(i){
-    navs.forEach((n,j)=>n.classList.toggle('active',j===i));
-    tabs.forEach((t,j)=>t.classList.toggle('active',j===i));
-    if(i===1)renderComments();
-}
-navs.forEach((n,i)=>n.addEventListener('click',()=>switchTab(i)));
-
-function renderComments(){
-    const list=$('commentsList');list.innerHTML='';
-    const parents=commentsData.filter(c=>c.parentId===null);
-    if(!parents.length){list.innerHTML='<div class="loading-note">まだコメントはありません</div>';return}
-    parents.forEach(c=>{
-        list.appendChild(createCommentCard(c,false));
-        commentsData.filter(x=>x.parentId===c.id).forEach(x=>list.appendChild(createCommentCard(x,true)));
-    });
-}
-function createCommentCard(c,isReply){
-    const card=document.createElement('div');card.className=`comment-card ${isReply?'reply-card':''}`;
-    let text=escapeHtml(c.text).replace(/(@[^\s　]+)/g,'<span class="mention-tag">$1</span>').replace(/(>>\d+)/g,'<span class="mention-tag">$1</span>');
-    card.innerHTML=`<div class="comment-header"><span class="comment-author">${escapeHtml(c.author)}</span><span>${escapeHtml(c.time)}</span></div>
-    <div class="comment-text">${text}</div>
-    <div class="comment-actions">
-      <button class="action-btn like-btn" data-act="like"><span class="material-symbols-outlined">thumb_up</span><span>${c.likes}</span></button>
-      <button class="action-btn dislike-btn" data-act="dislike"><span class="material-symbols-outlined">thumb_down</span><span>${c.dislikes}</span></button>
-      <button class="action-btn" data-act="reply"><span class="material-symbols-outlined">reply</span><span>返信</span></button>
-    </div>`;
-    card.querySelector('[data-act="like"]').addEventListener('click',()=>{c.likes++;renderComments()});
-    card.querySelector('[data-act="dislike"]').addEventListener('click',()=>{c.dislikes++;renderComments()});
-    card.querySelector('[data-act="reply"]').addEventListener('click',()=>setReplyTarget(c.id,c.author));
-    return card;
-}
-function setReplyTarget(id,author){
-    const target=commentsData.find(c=>c.id===id);currentReplyTarget={id:target.parentId||target.id,author};
-    $('replyTargetText').textContent=`@${author} へ返信中`;
-    $('replyTargetBar').classList.remove('hidden');
-    const input=$('commentTextInput');
-    if(!input.value.includes(`@${author}`))input.value=`@${author} `+input.value;
-    input.focus();
-}
+$('helpBtn').addEventListener('click',()=>$('helpDialog').showModal());$('closeHelpBtn').addEventListener('click',()=>$('helpDialog').close());
+const navs=[$('navHomeTab'),$('navCommentsTab'),$('navSettingsTab')],tabs=[$('tabHome'),$('tabComments'),$('tabSettings')];function switchTab(i){navs.forEach((n,j)=>n.classList.toggle('active',j===i));tabs.forEach((t,j)=>t.classList.toggle('active',j===i));if(i===1)renderComments()}navs.forEach((n,i)=>n.addEventListener('click',()=>switchTab(i)));
+function renderComments(){const list=$('commentsList');list.innerHTML='';const parents=commentsData.filter(c=>c.parentId===null);if(!parents.length){list.innerHTML='<div class="loading-note">まだコメントはありません</div>';return}parents.forEach(c=>{list.appendChild(createCommentCard(c,false));commentsData.filter(x=>x.parentId===c.id).forEach(x=>list.appendChild(createCommentCard(x,true)))})}
+function createCommentCard(c,isReply){const card=document.createElement('div');card.className=`comment-card ${isReply?'reply-card':''}`;let t=escapeHtml(c.text).replace(/(@[^\s　]+)/g,'<span class="mention-tag">$1</span>').replace(/(>>\d+)/g,'<span class="mention-tag">$1</span>');card.innerHTML=`<div class="comment-header"><span class="comment-author">${escapeHtml(c.author)}</span><span>${escapeHtml(c.time)}</span></div><div class="comment-text">${t}</div><div class="comment-actions"><button class="action-btn like-btn"><span class="material-symbols-outlined">thumb_up</span><span>${c.likes}</span></button><button class="action-btn dislike-btn"><span class="material-symbols-outlined">thumb_down</span><span>${c.dislikes}</span></button><button class="action-btn"><span class="material-symbols-outlined">reply</span><span>返信</span></button></div>`;card.querySelector('.like-btn').onclick=()=>{c.likes++;renderComments()};card.querySelector('.dislike-btn').onclick=()=>{c.dislikes++;renderComments()};card.querySelector('.action-btn:last-child').onclick=()=>setReplyTarget(c.id,c.author);return card}
+function setReplyTarget(id,author){const t=commentsData.find(c=>c.id===id);currentReplyTarget={id:t.parentId||t.id,author};$('replyTargetText').textContent=`@${author} へ返信中`;$('replyTargetBar').classList.remove('hidden');const input=$('commentTextInput');if(!input.value.includes('@'+author))input.value='@'+author+' '+input.value;input.focus()}
 $('cancelReplyBtn').addEventListener('click',()=>{currentReplyTarget=null;$('replyTargetBar').classList.add('hidden')});
-$('postCommentBtn').addEventListener('click',()=>{
-    const text=$('commentTextInput').value.trim();
-    if(!text){alert('コメント本文を入力してください');return}
-    const author=$('commentAuthorInput').value.trim()||'名無しさん',now=new Date();
-    const time=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    commentsData.push({id:Date.now(),parentId:currentReplyTarget?currentReplyTarget.id:null,author,text,time,likes:0,dislikes:0});
-    $('commentTextInput').value='';currentReplyTarget=null;$('replyTargetBar').classList.add('hidden');renderComments();
-});
-
-function decompressGzipBase64(base64Str){
-    const binary=atob(base64Str),bytes=new Uint8Array(binary.length);
-    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
-    const stream=new ReadableStream({start(controller){controller.enqueue(bytes);controller.close()}})
-        .pipeThrough(new DecompressionStream('gzip'));
-    return new Response(stream).arrayBuffer().then(buf=>new TextDecoder().decode(buf));
-}
-async function loadDataPacks(){
-    const packs=window.__COOKIE_DATA_PACKS||[];
-    const usable=packs.filter(Boolean);
-    if(!usable.length){
-        $('dbStatusNote').textContent='データパックが見つかりませんでした。';
-        resultsList.innerHTML='<div class="loading-note">データがセットされていません</div>';return;
-    }
-    let loaded=0,totalRes=0;
-    for(let i=0;i<packs.length;i++){
-        if(!packs[i])continue;
-        try{
-            $('dbStatusNote').textContent=`データパック解凍中 (${i+1}/${packs.length})...`;
-            const parsed=JSON.parse(await decompressGzipBase64(packs[i]));
-            if(Array.isArray(parsed))dbData.push(...parsed);else dbData.push(parsed);
-            loaded++;
-        }catch(e){console.error(`Pack ${i+1} の読み込みに失敗:`,e)}
-    }
-    dbData.forEach(t=>{if(Array.isArray(t.responses))totalRes+=t.responses.length});
-    $('dbThreads').textContent=dbData.length.toLocaleString();
-    $('dbRes').textContent=totalRes.toLocaleString();
-    $('dbStatusNote').textContent=`データ読み込み完了 (${loaded}/${packs.length} パック)`;
-    resultsList.innerHTML='<div class="loading-note">検索キーワードまたは絞り込み条件を入力してください</div>';
-}
-
+$('postCommentBtn').addEventListener('click',()=>{const text=$('commentTextInput').value.trim();if(!text){alert('コメント本文を入力してください');return}const author=$('commentAuthorInput').value.trim()||'名無しさん',now=new Date(),time=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;commentsData.push({id:Date.now(),parentId:currentReplyTarget?currentReplyTarget.id:null,author,text,time,likes:0,dislikes:0});$('commentTextInput').value='';currentReplyTarget=null;$('replyTargetBar').classList.add('hidden');renderComments()});
 $('loadBtn').addEventListener('click',()=>$('fileInput').click());
-$('fileInput').addEventListener('change',e=>{
-    const file=e.target.files[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=ev=>{
-        try{
-            const parsed=JSON.parse(ev.target.result);
-            if(Array.isArray(parsed))dbData.push(...parsed);else dbData.push(parsed);
-            updateDbStats();performSearch();
-        }catch(err){alert('JSONファイルの解析に失敗しました。')}
-    };
-    reader.readAsText(file);
-});
-function updateDbStats(){
-    let r=0;dbData.forEach(t=>{if(Array.isArray(t.responses))r+=t.responses.length});
-    $('dbThreads').textContent=dbData.length.toLocaleString();
-    $('dbRes').textContent=r.toLocaleString();
-    $('dbStatusNote').textContent=dbData.length?`データ読み込み完了 (${dbData.length.toLocaleString()} スレッド / ${r.toLocaleString()} レス)`:'データが読み込まれていません。';
-}
-$('clearBtn').addEventListener('click',()=>{
-    dbData=[];updateDbStats();
-    resultsList.innerHTML='<div class="loading-note">データがクリアされました</div>';
-    resultCount.textContent='---';threadCount.textContent='---';searchTime.textContent='---';
-});
-
+$('fileInput').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const parsed=JSON.parse(ev.target.result);worker.postMessage({type:'loadStructured',data:parsed});$('dbStatusNote').textContent='ローカルJSONを読み込み中…'}catch(err){alert('JSONファイルの解析に失敗しました。')}};reader.readAsText(file)});
+$('clearBtn').addEventListener('click',()=>{worker.terminate();dbReady=false;dbCount=0;resultCount.textContent='---';threadCount.textContent='---';searchTime.textContent='---';$('dbThreads').textContent='0';$('dbRes').textContent='0';$('dbStatusNote').textContent='データをクリアしました。※内蔵データを再読込するにはページを再読み込みしてください。';resultsList.innerHTML='<div class="loading-note">データがクリアされました</div>'});
+worker.onmessage=e=>{const m=e.data;if(m.type==='loaded'){dbCount=m.count;$('dbStatusNote').textContent=`データ読み込み中… ${m.count.toLocaleString()} レスを解析済み`;if(window.__COOKIE_PACK_LOADING__){window.__COOKIE_PACK_LOADING__++;const n=window.__COOKIE_PACK_LOADING__;if(n<8){const next=window.__COOKIE_DATA_PACKS[n];if(typeof next!=='string'||!next.length){$('dbStatusNote').textContent=`data-${n+1}.js のデータが空です。`;return}worker.postMessage({type:'load',b64:next});window.__COOKIE_DATA_PACKS[n]=null}else{worker.postMessage({type:'finish'});}}}
+else if(m.type==='ready'){dbReady=true;dbCount=m.count;dbThreadsCount=m.threads;$('dbThreads').textContent=dbThreadsCount.toLocaleString();$('dbRes').textContent=dbCount.toLocaleString();$('dbStatusNote').textContent=`データ読み込み完了 (${dbThreadsCount.toLocaleString()} スレッド / ${dbCount.toLocaleString()} レス)`;resultsList.innerHTML='<div class="loading-note">検索キーワードまたは絞り込み条件を入力してください</div>'}
+else if(m.type==='found'){resultCount.textContent=m.total.toLocaleString();threadCount.textContent=m.threads.toLocaleString();searchTime.textContent=(m.ms/1000).toFixed(3);const keys=[...splitWords(searchInput.value),...splitWords(includeWords.value)];renderResults(m.rows,keys,m.total,m.q.limit)}
+else if(m.type==='searchProgress'){$('dbStatusNote').textContent=`検索中… ${Math.round(m.value*100)}%`}
+else if(m.type==='error'){console.error(m.message);$('dbStatusNote').textContent='データ処理中にエラーが発生しました。コンソールを確認してください。';resultsList.innerHTML='<div class="loading-note">データの読み込みに失敗しました。</div>'}};
+// 内蔵8パックを読み込む。data-X.js は window.__COOKIE_DATA_PACKS[X-1] にBase64を格納する形式。
+(async()=>{const packs=window.__COOKIE_DATA_PACKS||[];if(packs.length<8){$('dbStatusNote').textContent=`データパック不足: ${8-packs.length}個。data-1.js〜data-8.jsをindex.htmlと同じ場所に置いてください。`;resultsList.innerHTML='<div class="loading-note">data-1.js〜data-8.js を確認してください。</div>';return}for(let i=0;i<8;i++){if(typeof packs[i]!=='string'||!packs[i].length){$('dbStatusNote').textContent=`data-${i+1}.js のデータが空です。`;return}if(i===0){window.__COOKIE_PACK_LOADING__=1;worker.postMessage({type:'load',b64:packs[0]});window.__COOKIE_DATA_PACKS[0]=null;break}}})();
 renderComments();
-loadDataPacks();
 </script>
 </body>
 </html>
