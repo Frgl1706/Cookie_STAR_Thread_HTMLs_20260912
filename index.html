@@ -283,7 +283,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
                 <span>検索結果一覧</span>
                 <span id="activeFilterLabel"></span>
             </div>
-            <div id="resultsList"><div class="loading-note">データを読み込み中...</div></div>
+            <div id="resultsList"><div class="loading-note loading-state"><span class="loading-spinner" aria-hidden="true"></span><strong>データを読み込み中</strong><span id="loadingThreadCount">(現在の読み込みスレッド数: 0)</span></div></div>
         </div>
     </div>
 
@@ -324,8 +324,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
             <input type="file" id="fileInput" class="file-input" accept=".json">
             <div style="display:flex;flex-direction:column;gap:9px">
                 <button id="loadBtn" class="btn btn-primary" type="button">追加ローカルJSON読込</button>
-                <button id="clearBtn" class="btn btn-danger" type="button">データをクリア</button>
-            </div>
+                            </div>
         </div>
     </div>
 </div>
@@ -345,22 +344,24 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
         <p><strong>1. ホーム（検索）</strong><br>キーワードを入力するとレスを検索します。AND・OR・NOTを切り替えられます。</p><br>
         <p><strong>2. 詳細検索・絞り込み</strong><br>含める語・除外語・タイトル・名前・レス番号・日付・検索対象・完全一致フレーズ・表示上限を指定できます。</p><br>
         <p><strong>3. コメント欄</strong><br>コメント投稿、いいね、悪いね、返信、メンションが利用できます。</p><br>
-        <p><strong>4. その他</strong><br>データベースの状態確認、ソート順変更、ローカルJSONの追加読込、データクリアができます。</p>
+        <p><strong>4. その他</strong><br>データベースの状態確認、ソート順変更、ローカルJSONの追加読込ができます。</p>
     </div>
 </dialog>
 
 <script>const WORKER_SOURCE=`let texts=[],threads=[],A=[],B=[],E=[],T=[],N=[],D=[],NAME=[],hits=[],queryNo=0;
 const norm=(s,fold)=>fold?String(s??'').normalize('NFKC').toLowerCase():String(s??'').normalize('NFKC');
 const words=s=>Array.from(String(s??'').matchAll(/"([^"]+)"|(\S+)/g),m=>m[1]||m[2]);
-function parse(s,file){
+async function parse(s,file){
  texts.push(s);let tid=-1,prev=-1;
- const re=/^={20,}\n([^\n]+)\n(https?:\/\/[^\n]+)\n={20,}[^\n]*|^(\d{1,6})\s+名前：([^\n]*)/gm;let m;
+ const re=/^={20,}\n([^\n]+)\n(https?:\/\/[^\n]+)\n={20,}[^\n]*|^(\d{1,6})\s+名前：([^\n]*)/gm;let m;let steps=0;
  while((m=re.exec(s))){
   if(prev>=0)E[prev]=m.index;
   if(m[1]){if(tid>=0)threads[tid].last=A.length;tid=threads.length;threads.push({title:m[1],url:m[2].trim(),file,first:A.length,last:A.length});prev=-1;}
   else if(tid>=0){prev=A.length;A.push(m.index);B.push(re.lastIndex+1);E.push(s.length);T.push(tid);N.push(parseInt(m[3],10)||0);NAME.push((m[4]||'').trim());let dt=m[0].match(/(?:：|\s)(\d{4})[\/-](\d{2})[\/-](\d{2})/);D.push(dt?+(dt[1]+dt[2]+dt[3]):0);}
+  if((++steps % 10000)===0){postMessage({type:'loadProgress',threads:threads.length,responses:A.length,file:file+1});await new Promise(r=>setTimeout(r,0));}
  }
  if(tid>=0)threads[tid].last=A.length;
+ postMessage({type:'loadProgress',threads:threads.length,responses:A.length,file:file+1});
 }
 function addStructured(arr){
  if(!Array.isArray(arr))arr=[arr];
@@ -422,7 +423,7 @@ function search(q){
 }
 onmessage=async({data:m})=>{try{
  if(m.type==='load'){
-  let bytes=Uint8Array.from(atob(m.b64),c=>c.charCodeAt(0));let buf=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();parse(new TextDecoder().decode(buf).replace(/\r\n?/g,'\n'),texts.length);postMessage({type:'loaded',count:A.length});
+  let bytes=Uint8Array.from(atob(m.b64),c=>c.charCodeAt(0));let buf=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();await parse(new TextDecoder().decode(buf).replace(/\r\n?/g,'\n'),texts.length);postMessage({type:'loaded',count:A.length,threads:threads.length});
  }else if(m.type==='loadStructured'){addStructured(m.data);postMessage({type:'loaded',count:A.length});}
  else if(m.type==='finish'){
   A=Uint32Array.from(A);B=Uint32Array.from(B);E=Uint32Array.from(E);T=Uint32Array.from(T);N=Uint32Array.from(N);D=Uint32Array.from(D);postMessage({type:'ready',count:A.length,threads:threads.length});
@@ -437,7 +438,7 @@ let commentsData=[
 ];
 const $=id=>document.getElementById(id),body=document.body;
 const searchInput=$('searchInput'),modeSlider=$('modeSlider'),resultsList=$('resultsList');
-const resultCount=$('resultCount'),threadCount=$('threadCount'),searchTime=$('searchTime');
+const resultCount=$('resultCount'),threadCount=$('threadCount'),searchTime=$('searchTime'),loadingThreadCount=$('loadingThreadCount');
 const fold=$('fold'),highlight=$('highlight');
 const includeWords=$('includeWords'),excludeWords=$('excludeWords'),titleFilter=$('titleFilter'),nameFilter=$('nameFilter');
 const minRes=$('minRes'),maxRes=$('maxRes'),fromDate=$('fromDate'),toDate=$('toDate');
@@ -474,8 +475,8 @@ $('cancelReplyBtn').addEventListener('click',()=>{currentReplyTarget=null;$('rep
 $('postCommentBtn').addEventListener('click',()=>{const text=$('commentTextInput').value.trim();if(!text){alert('コメント本文を入力してください');return}const author=$('commentAuthorInput').value.trim()||'名無しさん',now=new Date(),time=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;commentsData.push({id:Date.now(),parentId:currentReplyTarget?currentReplyTarget.id:null,author,text,time,likes:0,dislikes:0});$('commentTextInput').value='';currentReplyTarget=null;$('replyTargetBar').classList.add('hidden');renderComments()});
 $('loadBtn').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const parsed=JSON.parse(ev.target.result);worker.postMessage({type:'loadStructured',data:parsed});$('dbStatusNote').textContent='ローカルJSONを読み込み中…'}catch(err){alert('JSONファイルの解析に失敗しました。')}};reader.readAsText(file)});
-$('clearBtn').addEventListener('click',()=>{worker.terminate();dbReady=false;dbCount=0;resultCount.textContent='---';threadCount.textContent='---';searchTime.textContent='---';$('dbThreads').textContent='0';$('dbRes').textContent='0';$('dbStatusNote').textContent='データをクリアしました。※内蔵データを再読込するにはページを再読み込みしてください。';resultsList.innerHTML='<div class="loading-note">データがクリアされました</div>'});
-worker.onmessage=e=>{const m=e.data;if(m.type==='loaded'){dbCount=m.count;$('dbStatusNote').textContent=`データ読み込み中… ${m.count.toLocaleString()} レスを解析済み`;if(window.__COOKIE_PACK_LOADING__){window.__COOKIE_PACK_LOADING__++;const n=window.__COOKIE_PACK_LOADING__;if(n<8){const next=window.__COOKIE_DATA_PACKS[n];if(typeof next!=='string'||!next.length){$('dbStatusNote').textContent=`data-${n+1}.js のデータが空です。`;return}worker.postMessage({type:'load',b64:next});window.__COOKIE_DATA_PACKS[n]=null}else{worker.postMessage({type:'finish'});}}}
+worker.onmessage=e=>{const m=e.data;if(m.type==='loadProgress'){loadingThreadCount.textContent=`(現在の読み込みスレッド数: ${m.threads.toLocaleString()})`;$('dbStatusNote').textContent=`データ読み込み中… data-${m.file}.js / ${m.threads.toLocaleString()} スレッド / ${m.responses.toLocaleString()} レス`; }
+else if(m.type==='loaded'){dbCount=m.count;loadingThreadCount.textContent=`(現在の読み込みスレッド数: ${m.threads.toLocaleString()})`;$('dbStatusNote').textContent=`データ読み込み中… ${m.threads.toLocaleString()} スレッド / ${m.count.toLocaleString()} レスを解析済み`; if(window.__COOKIE_PACK_LOADING__){window.__COOKIE_PACK_LOADING__++;const n=window.__COOKIE_PACK_LOADING__;if(n<8){const next=window.__COOKIE_DATA_PACKS[n];if(typeof next!=='string'||!next.length){$('dbStatusNote').textContent=`data-${n+1}.js のデータが空です。`;return}worker.postMessage({type:'load',b64:next});window.__COOKIE_DATA_PACKS[n]=null}else{worker.postMessage({type:'finish'});}}}
 else if(m.type==='ready'){dbReady=true;dbCount=m.count;dbThreadsCount=m.threads;$('dbThreads').textContent=dbThreadsCount.toLocaleString();$('dbRes').textContent=dbCount.toLocaleString();$('dbStatusNote').textContent=`データ読み込み完了 (${dbThreadsCount.toLocaleString()} スレッド / ${dbCount.toLocaleString()} レス)`;resultsList.innerHTML='<div class="loading-note">検索キーワードまたは絞り込み条件を入力してください</div>'}
 else if(m.type==='found'){resultCount.textContent=m.total.toLocaleString();threadCount.textContent=m.threads.toLocaleString();searchTime.textContent=(m.ms/1000).toFixed(3);const keys=[...splitWords(searchInput.value),...splitWords(includeWords.value)];renderResults(m.rows,keys,m.total,m.q.limit)}
 else if(m.type==='searchProgress'){$('dbStatusNote').textContent=`検索中… ${Math.round(m.value*100)}%`}
