@@ -9,8 +9,15 @@
 <script>
 window.__COOKIE_DATA_PACKS = window.__COOKIE_DATA_PACKS || [];
 </script>
-<!-- data-1.js～data-8.js はDOM生成後に1つずつロードします。
-     巨大なBase64文字列をheadで8本同時実行すると、iPhone/iPad等では画面描画前に固まって見えるためです。 -->
+<!-- 旧動作版と同じ方式：dataパックを通常のscriptとして登録する -->
+<script type="text/javascript" data-pack="1" src="data-1.js"></script>
+<script type="text/javascript" data-pack="2" src="data-2.js"></script>
+<script type="text/javascript" data-pack="3" src="data-3.js"></script>
+<script type="text/javascript" data-pack="4" src="data-4.js"></script>
+<script type="text/javascript" data-pack="5" src="data-5.js"></script>
+<script type="text/javascript" data-pack="6" src="data-6.js"></script>
+<script type="text/javascript" data-pack="7" src="data-7.js"></script>
+<script type="text/javascript" data-pack="8" src="data-8.js"></script>
 
 <style>
 :root{
@@ -434,7 +441,9 @@ onmessage=async({data:m})=>{try{
  }else if(m.type==='search')search(m.q);
  else if(m.type==='cancel'){queryNo++;postMessage({type:'cancelled'});}
  }catch(e){postMessage({type:'error',message:e?.stack||e?.message||String(e)});}};`;
-const worker=new Worker(URL.createObjectURL(new Blob([WORKER_SOURCE],{type:'text/javascript'})));
+let worker=null;
+let workerFailed=false;
+try{ worker=new Worker(URL.createObjectURL(new Blob([WORKER_SOURCE],{type:'text/javascript'}))); }catch(err){ workerFailed=true; console.warn('[Cookie Search] Worker unavailable; main-thread fallback will be used.',err); }
 let dbReady=false,dbCount=0,dbThreadsCount=0,searchTimer=null,currentReplyTarget=null;
 let commentsData=[
  {id:1,parentId:null,author:'語録研究者',text:'本スレの過去ログ検索が快適で助かります！',time:'2026/09/18 10:15',likes:5,dislikes:0},
@@ -480,34 +489,9 @@ $('postCommentBtn').addEventListener('click',()=>{const text=$('commentTextInput
 $('loadBtn').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const parsed=JSON.parse(ev.target.result);worker.postMessage({type:'loadStructured',data:parsed});$('dbStatusNote').textContent='ローカルJSONを読み込み中…'}catch(err){alert('JSONファイルの解析に失敗しました。')}};reader.readAsText(file)});
 // ===== 内蔵データ8パックのロード =====
-// data-X.js は「1本読み込み → Workerへ渡す → 次の1本」の順に処理します。
-// これにより、巨大なdata-X.jsの評価で初期画面が固まる問題を避けます。
-async function loadCookieDataScripts(){
-  window.__COOKIE_DATA_PACKS = window.__COOKIE_DATA_PACKS || [];
-  for(let i=0;i<8;i++){
-    const no=i+1;
-    await new Promise((resolve,reject)=>{
-      const script=document.createElement('script');
-      script.type='text/javascript';
-      script.dataset.pack=String(no);
-      script.src=`./data-${no}.js`;
-      script.onload=()=>{
-        if(typeof window.__COOKIE_DATA_PACKS[i] !== 'string' || !window.__COOKIE_DATA_PACKS[i].length){
-          reject(new Error(`data-${no}.js は読み込まれましたが、データ登録を確認できません。`));
-          return;
-        }
-        resolve();
-      };
-      script.onerror=()=>reject(new Error(`data-${no}.js を読み込めません。index.html と同じフォルダにあるか確認してください。`));
-      document.body.appendChild(script);
-    });
-  }
-}
+// 旧動作版と同じく、全dataパックがwindow.__COOKIE_DATA_PACKSへ登録された後、
+// Workerへ1パックずつ渡す。data-pack属性は各ファイルの識別用に保持する。
 
-// 動作実績のある旧版と同じ方式：
-// 1) data-1.js～data-8.js はHTMLのscriptタグで先にwindow.__COOKIE_DATA_PACKSへ登録
-// 2) data-1 → loaded → data-2 → loaded … → data-8 → finish → ready
-// 3) Workerへの投入は必ず1パックずつ行う
 let cookiePackIndex = 0;
 let cookiePackLoading = false;
 let cookieLoadStartedAt = 0;
@@ -649,19 +633,23 @@ worker.onmessage = e => {
   }
 };
 
+window.addEventListener('error', e => {
+  const msg = e?.message || '不明なJavaScriptエラー';
+  console.error('[Cookie Search] window error:', e.error || e.message || e);
+  if(typeof failCookieLoad === 'function' && !dbReady) failCookieLoad(`JavaScriptエラー: ${msg}`);
+});
+if(worker){
+  worker.onerror = e => {
+    console.error('[Cookie Search] Worker error:', e.message, e.filename, e.lineno);
+    failCookieLoad(`Workerエラー: ${e.message || '詳細不明'}`);
+  };
+}
+
 renderComments();
 
-// まず画面を表示できる状態にしてから、巨大なデータJSを順番に読み込みます。
-(async()=>{
-  try{
-    setCookieLoadStatus('データファイルを準備中…','(data-1.js～data-8.js を順番に読み込みます)');
-    await loadCookieDataScripts();
-    startCookieDataLoad();
-  }catch(err){
-    console.error('[Cookie Search] data script load failed',err);
-    failCookieLoad(err?.message || String(err));
-  }
-})();
+// data-1.js～data-8.jsはheadのscriptタグで既に評価済み。
+// ここでは旧版と同じく、登録済みの8パックを検証してからWorkerへ投入する。
+startCookieDataLoad();
 </script>
 </body>
 </html>
