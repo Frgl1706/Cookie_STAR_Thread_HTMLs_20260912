@@ -9,15 +9,14 @@
 <script>
 window.__COOKIE_DATA_PACKS = window.__COOKIE_DATA_PACKS || [];
 </script>
-<!-- ===== External data packs: data-1.js ～ data-8.js ===== -->
-<script type="text/javascript" data-pack="1" src="data-1.js"></script>
-<script type="text/javascript" data-pack="2" src="data-2.js"></script>
-<script type="text/javascript" data-pack="3" src="data-3.js"></script>
-<script type="text/javascript" data-pack="4" src="data-4.js"></script>
-<script type="text/javascript" data-pack="5" src="data-5.js"></script>
-<script type="text/javascript" data-pack="6" src="data-6.js"></script>
-<script type="text/javascript" data-pack="7" src="data-7.js"></script>
-<script type="text/javascript" data-pack="8" src="data-8.js"></script>
+<script data-pack="1" src="data-1.js"></script>
+<script data-pack="2" src="data-2.js"></script>
+<script data-pack="3" src="data-3.js"></script>
+<script data-pack="4" src="data-4.js"></script>
+<script data-pack="5" src="data-5.js"></script>
+<script data-pack="6" src="data-6.js"></script>
+<script data-pack="7" src="data-7.js"></script>
+<script data-pack="8" src="data-8.js"></script>
 
 <style>
 :root{
@@ -482,8 +481,77 @@ else if(m.type==='ready'){dbReady=true;dbCount=m.count;dbThreadsCount=m.threads;
 else if(m.type==='found'){resultCount.textContent=m.total.toLocaleString();threadCount.textContent=m.threads.toLocaleString();searchTime.textContent=(m.ms/1000).toFixed(3);const keys=[...splitWords(searchInput.value),...splitWords(includeWords.value)];renderResults(m.rows,keys,m.total,m.q.limit)}
 else if(m.type==='searchProgress'){$('dbStatusNote').textContent=`検索中… ${Math.round(m.value*100)}%`}
 else if(m.type==='error'){console.error(m.message);$('dbStatusNote').textContent='データ処理中にエラーが発生しました。コンソールを確認してください。';resultsList.innerHTML='<div class="loading-note">データの読み込みに失敗しました。</div>'}};
-// 内蔵8パックを読み込む。data-X.js は window.__COOKIE_DATA_PACKS[X-1] にBase64を格納する形式。
-(async()=>{const packs=window.__COOKIE_DATA_PACKS||[];if(packs.length<8){$('dbStatusNote').textContent=`データパック不足: ${8-packs.length}個。data-1.js〜data-8.jsをindex.htmlと同じ場所に置いてください。`;resultsList.innerHTML='<div class="loading-note">data-1.js〜data-8.js を確認してください。</div>';return}for(let i=0;i<8;i++){if(typeof packs[i]!=='string'||!packs[i].length){$('dbStatusNote').textContent=`data-${i+1}.js のデータが空です。`;return}if(i===0){window.__COOKIE_PACK_LOADING__=1;worker.postMessage({type:'load',b64:packs[0]});window.__COOKIE_DATA_PACKS[0]=null;break}}})();
+// 内蔵8パックのロード制御。data-X.js は window.__COOKIE_DATA_PACKS[X-1] にBase64を格納する。
+// 重要: 8パックを一度にWorkerへ投げず、必ず「1 → loaded → 2 → loaded … → 8 → finish」の順で処理する。
+let cookiePackIndex=0;
+let cookiePackLoading=false;
+let cookieLoadStartedAt=0;
+function setCookieLoadMessage(message,detail=''){
+  $('dbStatusNote').textContent=message;
+  if(detail) loadingThreadCount.textContent=detail;
+}
+function failCookieLoad(message){
+  cookiePackLoading=false;
+  dbReady=false;
+  setCookieLoadMessage(message,'(読み込みに失敗しました)');
+  resultsList.innerHTML='<div class="loading-note">データの読み込みに失敗しました。data-1.js〜data-8.js が index.html と同じ場所にあるか確認してください。</div>';
+}
+function postCookiePack(index){
+  const packs=window.__COOKIE_DATA_PACKS||[];
+  const expected=index+1;
+  const b64=packs[index];
+  if(typeof b64!=='string'||!b64.length){
+    failCookieLoad(`data-${expected}.js のデータを取得できませんでした。`);
+    return;
+  }
+  cookiePackIndex=index;
+  cookiePackLoading=true;
+  const elapsed=Math.round((performance.now()-cookieLoadStartedAt)/1000);
+  loadingThreadCount.textContent=`(data-${expected}.js を処理中 / ${elapsed}秒)`;
+  $('dbStatusNote').textContent=`データを読み込み中… data-${expected}.js を解凍・解析しています`;
+  worker.postMessage({type:'load',b64});
+  // WorkerへのpostMessage後はメイン側の巨大Base64を保持し続けない。
+  window.__COOKIE_DATA_PACKS[index]=null;
+}
+function startCookieDataLoad(){
+  const packs=window.__COOKIE_DATA_PACKS||[];
+  for(let i=0;i<8;i++){
+    if(typeof packs[i]!=='string'||!packs[i].length){
+      failCookieLoad(`data-${i+1}.js のデータが空、または読み込まれていません。`);
+      return;
+    }
+  }
+  cookieLoadStartedAt=performance.now();
+  setCookieLoadMessage('データを読み込み中… data-1.js の解凍・解析を開始しています','(data-1.js を処理中)');
+  postCookiePack(0);
+}
+
+// Worker側のloaded通知からのみ次のパックを開始する。
+const originalWorkerOnMessage=worker.onmessage;
+worker.onmessage=e=>{
+  const m=e.data;
+  if(m.type==='loaded' && cookiePackLoading){
+    dbCount=m.count;
+    loadingThreadCount.textContent=`(data-${cookiePackIndex+1}.js 完了 / ${m.threads.toLocaleString()} スレッド / ${m.count.toLocaleString()} レス)`;
+    $('dbStatusNote').textContent=`data-${cookiePackIndex+1}.js の解析完了：${m.threads.toLocaleString()} スレッド / ${m.count.toLocaleString()} レス`;
+    const next=cookiePackIndex+1;
+    if(next<8){
+      // 次のパックだけをWorkerへ送る。前のパックの完了を待ってから進む。
+      setTimeout(()=>postCookiePack(next),0);
+    }else{
+      cookiePackLoading=false;
+      loadingThreadCount.textContent=`(8パックの解析完了 / ${m.threads.toLocaleString()} スレッド)`;
+      $('dbStatusNote').textContent='全8データパックの解析が完了しました。最終処理中…';
+      worker.postMessage({type:'finish'});
+    }
+    return;
+  }
+  // 既存アプリのメッセージ処理をそのまま実行する。
+  if(originalWorkerOnMessage) originalWorkerOnMessage(e);
+};
+
+// 外部data-X.jsが全て読み込まれた後に開始する。
+startCookieDataLoad();
 renderComments();
 </script>
 </body>
