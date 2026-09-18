@@ -349,7 +349,11 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     </div>
 </dialog>
 
-<script>const WORKER_SOURCE=`let texts=[],threads=[],A=[],B=[],E=[],T=[],N=[],D=[],NAME=[],hits=[],queryNo=0;
+<script>
+// ===== ここが修正ポイント =====
+// テンプレートリテラルに String.raw を付けることで、
+// 中の \n \s \d \/ などがそのままWorkerのソース文字列として渡される。
+const WORKER_SOURCE=String.raw`let texts=[],threads=[],A=[],B=[],E=[],T=[],N=[],D=[],NAME=[],hits=[],queryNo=0;
 const norm=(s,fold)=>fold?String(s??'').normalize('NFKC').toLowerCase():String(s??'').normalize('NFKC');
 const words=s=>Array.from(String(s??'').matchAll(/"([^"]+)"|(\S+)/g),m=>m[1]||m[2]);
 async function parse(s,file){
@@ -441,6 +445,8 @@ onmessage=async({data:m})=>{try{
  }else if(m.type==='search')search(m.q);
  else if(m.type==='cancel'){queryNo++;postMessage({type:'cancelled'});}
  }catch(e){postMessage({type:'error',message:e?.stack||e?.message||String(e)});}};`;
+// ===== 修正ここまで =====
+
 let worker=null;
 let workerFailed=false;
 try{ worker=new Worker(URL.createObjectURL(new Blob([WORKER_SOURCE],{type:'text/javascript'}))); }catch(err){ workerFailed=true; console.warn('[Cookie Search] Worker unavailable; main-thread fallback will be used.',err); }
