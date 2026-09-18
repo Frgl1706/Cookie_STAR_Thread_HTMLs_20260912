@@ -9,14 +9,8 @@
 <script>
 window.__COOKIE_DATA_PACKS = window.__COOKIE_DATA_PACKS || [];
 </script>
-<script data-pack="1" src="data-1.js"></script>
-<script data-pack="2" src="data-2.js"></script>
-<script data-pack="3" src="data-3.js"></script>
-<script data-pack="4" src="data-4.js"></script>
-<script data-pack="5" src="data-5.js"></script>
-<script data-pack="6" src="data-6.js"></script>
-<script data-pack="7" src="data-7.js"></script>
-<script data-pack="8" src="data-8.js"></script>
+<!-- data-1.js～data-8.js はDOM生成後に1つずつロードします。
+     巨大なBase64文字列をheadで8本同時実行すると、iPhone/iPad等では画面描画前に固まって見えるためです。 -->
 
 <style>
 :root{
@@ -423,7 +417,17 @@ function search(q){
 }
 onmessage=async({data:m})=>{try{
  if(m.type==='load'){
-  let bytes=Uint8Array.from(atob(m.b64),c=>c.charCodeAt(0));let buf=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();await parse(new TextDecoder().decode(buf).replace(/\r\n?/g,'\n'),texts.length);postMessage({type:'loaded',count:A.length,threads:threads.length});
+  try{
+   postMessage({type:'loadStarted',file:Number.isFinite(m.file)?m.file:texts.length});
+   if(typeof DecompressionStream==='undefined')throw new Error('DecompressionStream(gzip)が利用できません');
+   if(typeof m.b64!=='string'||!m.b64.length)throw new Error('Base64データが空です');
+   let bin=atob(m.b64),bytes=new Uint8Array(bin.length);
+   for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+   let buf=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+   let text=new TextDecoder().decode(buf).replace(/\r\n?/g,'\n');
+   await parse(text,Number.isFinite(m.file)?m.file:texts.length);
+   postMessage({type:'loaded',count:A.length,threads:threads.length});
+  }catch(e){postMessage({type:'error',message:e?.stack||e?.message||String(e),file:Number.isFinite(m.file)?m.file:texts.length});}
  }else if(m.type==='loadStructured'){addStructured(m.data);postMessage({type:'loaded',count:A.length});}
  else if(m.type==='finish'){
   A=Uint32Array.from(A);B=Uint32Array.from(B);E=Uint32Array.from(E);T=Uint32Array.from(T);N=Uint32Array.from(N);D=Uint32Array.from(D);postMessage({type:'ready',count:A.length,threads:threads.length});
@@ -475,84 +479,189 @@ $('cancelReplyBtn').addEventListener('click',()=>{currentReplyTarget=null;$('rep
 $('postCommentBtn').addEventListener('click',()=>{const text=$('commentTextInput').value.trim();if(!text){alert('コメント本文を入力してください');return}const author=$('commentAuthorInput').value.trim()||'名無しさん',now=new Date(),time=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;commentsData.push({id:Date.now(),parentId:currentReplyTarget?currentReplyTarget.id:null,author,text,time,likes:0,dislikes:0});$('commentTextInput').value='';currentReplyTarget=null;$('replyTargetBar').classList.add('hidden');renderComments()});
 $('loadBtn').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const parsed=JSON.parse(ev.target.result);worker.postMessage({type:'loadStructured',data:parsed});$('dbStatusNote').textContent='ローカルJSONを読み込み中…'}catch(err){alert('JSONファイルの解析に失敗しました。')}};reader.readAsText(file)});
-worker.onmessage=e=>{const m=e.data;if(m.type==='loadProgress'){loadingThreadCount.textContent=`(現在の読み込みスレッド数: ${m.threads.toLocaleString()})`;$('dbStatusNote').textContent=`データ読み込み中… data-${m.file}.js / ${m.threads.toLocaleString()} スレッド / ${m.responses.toLocaleString()} レス`; }
-else if(m.type==='loaded'){dbCount=m.count;loadingThreadCount.textContent=`(現在の読み込みスレッド数: ${m.threads.toLocaleString()})`;$('dbStatusNote').textContent=`データ読み込み中… ${m.threads.toLocaleString()} スレッド / ${m.count.toLocaleString()} レスを解析済み`; if(window.__COOKIE_PACK_LOADING__){window.__COOKIE_PACK_LOADING__++;const n=window.__COOKIE_PACK_LOADING__;if(n<8){const next=window.__COOKIE_DATA_PACKS[n];if(typeof next!=='string'||!next.length){$('dbStatusNote').textContent=`data-${n+1}.js のデータが空です。`;return}worker.postMessage({type:'load',b64:next});window.__COOKIE_DATA_PACKS[n]=null}else{worker.postMessage({type:'finish'});}}}
-else if(m.type==='ready'){dbReady=true;dbCount=m.count;dbThreadsCount=m.threads;$('dbThreads').textContent=dbThreadsCount.toLocaleString();$('dbRes').textContent=dbCount.toLocaleString();$('dbStatusNote').textContent=`データ読み込み完了 (${dbThreadsCount.toLocaleString()} スレッド / ${dbCount.toLocaleString()} レス)`;resultsList.innerHTML='<div class="loading-note">検索キーワードまたは絞り込み条件を入力してください</div>'}
-else if(m.type==='found'){resultCount.textContent=m.total.toLocaleString();threadCount.textContent=m.threads.toLocaleString();searchTime.textContent=(m.ms/1000).toFixed(3);const keys=[...splitWords(searchInput.value),...splitWords(includeWords.value)];renderResults(m.rows,keys,m.total,m.q.limit)}
-else if(m.type==='searchProgress'){$('dbStatusNote').textContent=`検索中… ${Math.round(m.value*100)}%`}
-else if(m.type==='error'){console.error(m.message);$('dbStatusNote').textContent='データ処理中にエラーが発生しました。コンソールを確認してください。';resultsList.innerHTML='<div class="loading-note">データの読み込みに失敗しました。</div>'}};
-// 内蔵8パックのロード制御。data-X.js は window.__COOKIE_DATA_PACKS[X-1] にBase64を格納する。
-// 重要: 8パックを一度にWorkerへ投げず、必ず「1 → loaded → 2 → loaded … → 8 → finish」の順で処理する。
-let cookiePackIndex=0;
-let cookiePackLoading=false;
-let cookieLoadStartedAt=0;
-function setCookieLoadMessage(message,detail=''){
-  $('dbStatusNote').textContent=message;
-  if(detail) loadingThreadCount.textContent=detail;
+// ===== 内蔵データ8パックのロード =====
+// data-X.js は「1本読み込み → Workerへ渡す → 次の1本」の順に処理します。
+// これにより、巨大なdata-X.jsの評価で初期画面が固まる問題を避けます。
+async function loadCookieDataScripts(){
+  window.__COOKIE_DATA_PACKS = window.__COOKIE_DATA_PACKS || [];
+  for(let i=0;i<8;i++){
+    const no=i+1;
+    await new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.type='text/javascript';
+      script.dataset.pack=String(no);
+      script.src=`./data-${no}.js`;
+      script.onload=()=>{
+        if(typeof window.__COOKIE_DATA_PACKS[i] !== 'string' || !window.__COOKIE_DATA_PACKS[i].length){
+          reject(new Error(`data-${no}.js は読み込まれましたが、データ登録を確認できません。`));
+          return;
+        }
+        resolve();
+      };
+      script.onerror=()=>reject(new Error(`data-${no}.js を読み込めません。index.html と同じフォルダにあるか確認してください。`));
+      document.body.appendChild(script);
+    });
+  }
 }
+
+// 動作実績のある旧版と同じ方式：
+// 1) data-1.js～data-8.js はHTMLのscriptタグで先にwindow.__COOKIE_DATA_PACKSへ登録
+// 2) data-1 → loaded → data-2 → loaded … → data-8 → finish → ready
+// 3) Workerへの投入は必ず1パックずつ行う
+let cookiePackIndex = 0;
+let cookiePackLoading = false;
+let cookieLoadStartedAt = 0;
+
+function setCookieLoadStatus(message, detail){
+  $('dbStatusNote').textContent = message;
+  if(detail !== undefined) loadingThreadCount.textContent = detail;
+}
+
 function failCookieLoad(message){
-  cookiePackLoading=false;
-  dbReady=false;
-  setCookieLoadMessage(message,'(読み込みに失敗しました)');
-  resultsList.innerHTML='<div class="loading-note">データの読み込みに失敗しました。data-1.js〜data-8.js が index.html と同じ場所にあるか確認してください。</div>';
+  cookiePackLoading = false;
+  dbReady = false;
+  console.error('[Cookie Search] '+message);
+  setCookieLoadStatus(message, '(読み込みに失敗しました)');
+  resultsList.innerHTML = '<div class="loading-note">データの読み込みに失敗しました。index.html と data-1.js～data-8.js が同じフォルダにあるか確認してください。</div>';
 }
+
 function postCookiePack(index){
-  const packs=window.__COOKIE_DATA_PACKS||[];
-  const expected=index+1;
-  const b64=packs[index];
-  if(typeof b64!=='string'||!b64.length){
-    failCookieLoad(`data-${expected}.js のデータを取得できませんでした。`);
+  const packs = window.__COOKIE_DATA_PACKS || [];
+  const packNo = index + 1;
+  const b64 = packs[index];
+
+  if(typeof b64 !== 'string' || b64.length === 0){
+    failCookieLoad(`data-${packNo}.js のデータを取得できませんでした。`);
     return;
   }
-  cookiePackIndex=index;
-  cookiePackLoading=true;
-  const elapsed=Math.round((performance.now()-cookieLoadStartedAt)/1000);
-  loadingThreadCount.textContent=`(data-${expected}.js を処理中 / ${elapsed}秒)`;
-  $('dbStatusNote').textContent=`データを読み込み中… data-${expected}.js を解凍・解析しています`;
-  worker.postMessage({type:'load',b64});
-  // WorkerへのpostMessage後はメイン側の巨大Base64を保持し続けない。
-  window.__COOKIE_DATA_PACKS[index]=null;
+
+  cookiePackIndex = index;
+  cookiePackLoading = true;
+  const elapsed = Math.floor((performance.now() - cookieLoadStartedAt) / 1000);
+  setCookieLoadStatus(
+    `データを読み込み中… data-${packNo}.js を解凍・解析しています`,
+    `(data-${packNo}.js を処理中 / ${elapsed}秒)`
+  );
+
+  try{
+    worker.postMessage({type:'load', b64:b64});
+    // postMessageでWorker側へコピーされた後はメイン側の巨大文字列を解放する。
+    window.__COOKIE_DATA_PACKS[index] = null;
+  }catch(err){
+    failCookieLoad(`data-${packNo}.js のWorker送信に失敗しました: ${err?.message || err}`);
+  }
 }
+
 function startCookieDataLoad(){
-  const packs=window.__COOKIE_DATA_PACKS||[];
+  const packs = window.__COOKIE_DATA_PACKS || [];
+
+  // 旧版と同じく、8個すべてのdata-X.jsがscriptとして正常に実行されたことを確認する。
   for(let i=0;i<8;i++){
-    if(typeof packs[i]!=='string'||!packs[i].length){
-      failCookieLoad(`data-${i+1}.js のデータが空、または読み込まれていません。`);
+    if(typeof packs[i] !== 'string' || packs[i].length === 0){
+      failCookieLoad(`data-${i+1}.js が読み込まれていません。`);
       return;
     }
   }
-  cookieLoadStartedAt=performance.now();
-  setCookieLoadMessage('データを読み込み中… data-1.js の解凍・解析を開始しています','(data-1.js を処理中)');
+
+  cookiePackIndex = 0;
+  cookiePackLoading = true;
+  cookieLoadStartedAt = performance.now();
+  setCookieLoadStatus(
+    'データを読み込み中… data-1.js の解凍・解析を開始しています',
+    '(現在の読み込みスレッド数: 0)'
+  );
+
   postCookiePack(0);
 }
 
-// Worker側のloaded通知からのみ次のパックを開始する。
-const originalWorkerOnMessage=worker.onmessage;
-worker.onmessage=e=>{
-  const m=e.data;
-  if(m.type==='loaded' && cookiePackLoading){
-    dbCount=m.count;
-    loadingThreadCount.textContent=`(data-${cookiePackIndex+1}.js 完了 / ${m.threads.toLocaleString()} スレッド / ${m.count.toLocaleString()} レス)`;
-    $('dbStatusNote').textContent=`data-${cookiePackIndex+1}.js の解析完了：${m.threads.toLocaleString()} スレッド / ${m.count.toLocaleString()} レス`;
-    const next=cookiePackIndex+1;
-    if(next<8){
-      // 次のパックだけをWorkerへ送る。前のパックの完了を待ってから進む。
-      setTimeout(()=>postCookiePack(next),0);
+// Workerからの通知はここ1か所だけで処理する。
+// 以前のコードのようにworker.onmessageを二重登録して、loaded通知を取りこぼさない。
+worker.onmessage = e => {
+  const m = e.data || {};
+
+  if(m.type === 'loadProgress'){
+    loadingThreadCount.textContent = `(現在の読み込みスレッド数: ${Number(m.threads||0).toLocaleString()})`;
+    $('dbStatusNote').textContent = `データ読み込み中… data-${Number(m.file||0)}.js / ${Number(m.threads||0).toLocaleString()} スレッド / ${Number(m.responses||0).toLocaleString()} レス`;
+    return;
+  }
+
+  if(m.type === 'loaded'){
+    if(!cookiePackLoading){
+      // ローカルJSON読込などのloadedは通常ここに来る。
+      dbCount = Number(m.count||0);
+      if(m.threads != null) dbThreadsCount = Number(m.threads||0);
+      return;
+    }
+
+    const currentNo = cookiePackIndex + 1;
+    dbCount = Number(m.count || 0);
+    dbThreadsCount = Number(m.threads || 0);
+    loadingThreadCount.textContent = `(data-${currentNo}.js 完了 / ${dbThreadsCount.toLocaleString()} スレッド / ${dbCount.toLocaleString()} レス)`;
+    $('dbStatusNote').textContent = `data-${currentNo}.js の解析完了：${dbThreadsCount.toLocaleString()} スレッド / ${dbCount.toLocaleString()} レス`;
+
+    const next = cookiePackIndex + 1;
+    if(next < 8){
+      // 現在のパックのloadedを受信してから、次の1個だけを送る。
+      setTimeout(() => postCookiePack(next), 0);
     }else{
-      cookiePackLoading=false;
-      loadingThreadCount.textContent=`(8パックの解析完了 / ${m.threads.toLocaleString()} スレッド)`;
-      $('dbStatusNote').textContent='全8データパックの解析が完了しました。最終処理中…';
-      worker.postMessage({type:'finish'});
+      cookiePackLoading = false;
+      loadingThreadCount.textContent = `(8パックの解析完了 / ${dbThreadsCount.toLocaleString()} スレッド)`;
+      $('dbStatusNote').textContent = '全8データパックの解析が完了しました。最終処理中…';
+      try{
+        worker.postMessage({type:'finish'});
+      }catch(err){
+        failCookieLoad(`最終処理の開始に失敗しました: ${err?.message || err}`);
+      }
     }
     return;
   }
-  // 既存アプリのメッセージ処理をそのまま実行する。
-  if(originalWorkerOnMessage) originalWorkerOnMessage(e);
+
+  if(m.type === 'ready'){
+    dbReady = true;
+    dbCount = Number(m.count || 0);
+    dbThreadsCount = Number(m.threads || 0);
+    $('dbThreads').textContent = dbThreadsCount.toLocaleString();
+    $('dbRes').textContent = dbCount.toLocaleString();
+    $('dbStatusNote').textContent = `データ読み込み完了 (${dbThreadsCount.toLocaleString()} スレッド / ${dbCount.toLocaleString()} レス)`;
+    loadingThreadCount.textContent = `(読み込み完了 / ${dbThreadsCount.toLocaleString()} スレッド)`;
+    resultsList.innerHTML = '<div class="loading-note">検索キーワードまたは絞り込み条件を入力してください</div>';
+    return;
+  }
+
+  if(m.type === 'found'){
+    resultCount.textContent = Number(m.total||0).toLocaleString();
+    threadCount.textContent = Number(m.threads||0).toLocaleString();
+    searchTime.textContent = (Number(m.ms||0)/1000).toFixed(3);
+    const keys = [...splitWords(searchInput.value), ...splitWords(includeWords.value)];
+    renderResults(m.rows || [], keys, Number(m.total||0), m.q?.limit);
+    return;
+  }
+
+  if(m.type === 'searchProgress'){
+    $('dbStatusNote').textContent = `検索中… ${Math.round(Number(m.value||0)*100)}%`;
+    return;
+  }
+
+  if(m.type === 'error'){
+    console.error('[Cookie Search Worker]', m.message);
+    failCookieLoad('データ処理中にエラーが発生しました。');
+    return;
+  }
 };
 
-// 外部data-X.jsが全て読み込まれた後に開始する。
-startCookieDataLoad();
 renderComments();
+
+// まず画面を表示できる状態にしてから、巨大なデータJSを順番に読み込みます。
+(async()=>{
+  try{
+    setCookieLoadStatus('データファイルを準備中…','(data-1.js～data-8.js を順番に読み込みます)');
+    await loadCookieDataScripts();
+    startCookieDataLoad();
+  }catch(err){
+    console.error('[Cookie Search] data script load failed',err);
+    failCookieLoad(err?.message || String(err));
+  }
+})();
 </script>
 </body>
 </html>
