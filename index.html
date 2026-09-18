@@ -1,1142 +1,1115 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
-<title>クッキー☆本スレ検索室</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL,GRAD,opsz,wght@0,0,20..48,300&icon_names=search,menu,dark_mode,help,language,close,database,tune,translate,verified_user,bookmark,upload_file,file_open,download,chevron_left,chevron_right,arrow_back,menu_book,info,warning,keyboard,add_comment,alternate_email,thumb_up,thumb_down,reply,settings,restart_alt,forum,home,list&display=block">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>クッキー☆本スレ検索室</title>
+    <!-- Google Material Symbols Outlined -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    
+    <!-- データパック格納用配列の初期定義 -->
+    <script>
+        window.__COOKIE_DATA_PACKS = window.__COOKIE_DATA_PACKS || [];
+    </script>
+    <!-- data-1.js 〜 data-8.js の自動読み込み -->
+    <script src="data-1.js"></script>
+    <script src="data-2.js"></script>
+    <script src="data-3.js"></script>
+    <script src="data-4.js"></script>
+    <script src="data-5.js"></script>
+    <script src="data-6.js"></script>
+    <script src="data-7.js"></script>
+    <script src="data-8.js"></script>
 
-@import url('https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@300;400;500;700;800;900&family=M+PLUS+Rounded+1c:wght@300;400;500;700;800;900&display=swap');
+    <style>
+        :root {
+            --bg-color: #f7f7f8;
+            --card-bg: #ffffff;
+            --text-color: #222222;
+            --muted-color: #777777;
+            --border-color: #e0e0e0;
+            --accent-color: #7c83fd;
+            --accent-light: #eef0ff;
+            --bottom-nav-bg: #e5e5e5;
+            --bottom-nav-active: #ffffff;
+            --mark-bg: #fff0a8;
+            --like-color: #3b82f6;
+            --dislike-color: #ef4444;
+        }
 
-:root{
-  --left:#f7f7f7; --right:#fff; --panel:#fff; --text:#171717; --muted:#777;
-  --line:#c9c9c9; --line2:#dedede; --soft:#eeeeee; --accent:#7c83fd;
-  --accent-soft:#e7e8ff; --nav:#dedede; --nav-active:#f7f7f7;
-  --mark:#fff0a8; --danger:#b33a3a; --like:#2f6fdd;
-}
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;min-height:100%;background:var(--right);color:var(--text)}
-body{
-  font-family:'M PLUS Rounded 1c','M PLUS 1p',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  font-size:15px;line-height:1.55;overflow:hidden;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-}
-body.dark{
-  --left:#151515;--right:#101010;--panel:#191919;--text:#f0f0f0;--muted:#aaa;
-  --line:#5a5a5a;--line2:#3c3c3c;--soft:#292929;--accent:#a6adff;
-  --accent-soft:#30324b;--nav:#2a2a2a;--nav-active:#1b1b1b;--mark:#5d521d;
-}
-button,input,select,textarea{font:inherit}
-button{cursor:pointer}
-button:disabled{opacity:.45;cursor:default}
-button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
-  outline:2px solid var(--accent);outline-offset:2px
-}
-a{color:var(--accent)}
-.hidden{display:none!important}
-.srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.material-symbols-outlined{
-  font-family:'Material Symbols Outlined';
-  font-weight:300;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;
-  text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;
-  -webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased;
-  font-feature-settings:'liga';font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24;
-}
+        body.dark {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #f0f0f0;
+            --muted-color: #aaaaaa;
+            --border-color: #333333;
+            --accent-color: #9aa0ff;
+            --accent-light: #2a2c40;
+            --bottom-nav-bg: #1a1a1a;
+            --bottom-nav-active: #2a2a2a;
+            --mark-bg: #62571e;
+            --like-color: #60a5fa;
+            --dislike-color: #f87171;
+        }
 
-/* ===== 画像に合わせた二分割レイアウト ===== */
-.app{
-  position:relative;width:100vw;height:100vh;display:grid;
-  grid-template-columns:49.5% 50.5%;background:var(--right);
-}
-.side{
-  position:relative;min-width:0;height:100vh;overflow-y:auto;overflow-x:hidden;
-  background:var(--left);border-right:1px solid #858585;padding:26px 34px 150px;
-  scrollbar-width:thin;
-}
-.content{
-  position:relative;min-width:0;height:100vh;overflow-y:auto;overflow-x:hidden;
-  background:var(--right);padding:28px 42px 135px;
-}
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
 
-/* ===== 左上ステータス ===== */
-.statusTop{
-  display:flex;justify-content:space-between;align-items:flex-start;gap:18px;
-  margin-bottom:36px;
-}
-.metrics{display:flex;gap:20px;align-items:baseline;flex-wrap:wrap}
-.metric{font-size:17px;color:var(--muted);white-space:nowrap}
-.metric strong{font-size:30px;font-weight:500;color:var(--text);letter-spacing:-.03em}
-.quick{display:flex;gap:24px;flex-wrap:wrap}
-.quick button{
-  appearance:none;border:0;background:transparent;color:var(--text);
-  padding:4px 0;font-size:16px;display:flex;align-items:center;gap:5px;
-}
-.quick button:hover{color:var(--accent)}
-.quick .material-symbols-outlined{font-size:20px}
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 70px; /* ボトムナビ用の余白 */
+        }
 
-/* ===== ブランド ===== */
-.brandBlock{margin-bottom:38px}
-.brandBlock .kicker{font-size:13px;color:#bcbcbc;letter-spacing:.18em;margin-bottom:4px}
-.brandBlock h1{font-size:clamp(30px,4.1vw,54px);font-weight:900;line-height:.94;letter-spacing:-.055em;margin:0}
-.brandBlock p{margin-top:9px;color:var(--muted);font-size:13px}
+        /* ===== メインコンテナ ===== */
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 16px;
+            flex: 1;
+        }
 
-/* ===== 検索 ===== */
-.searchHeading{
-  display:flex;align-items:center;gap:9px;color:var(--text);
-  font-size:18px;font-weight:500;margin-bottom:9px;
-}
-.searchHeading::before{content:"";width:16px;height:16px;background:var(--text);display:block;flex:0 0 16px}
-.searchbox{display:flex;align-items:stretch;gap:9px;margin-bottom:13px}
-.searchbox input{
-  min-width:0;flex:1;border:0;border-bottom:2px solid #9d9d9d;border-radius:0;
-  background:transparent;color:var(--text);padding:4px 0 7px;font-size:25px;font-weight:300;
-  outline:none;box-shadow:none;
-}
-.searchbox input::placeholder{color:#b7b7b7;opacity:1}
-.searchbox input:focus{border-bottom-color:var(--text);box-shadow:none}
-.searchButton{
-  width:54px;border:1px solid #777;border-radius:0;background:transparent;color:var(--text);
-  display:grid;place-items:center;padding:0;
-}
-.searchButton:hover{background:var(--text);color:var(--left)}
-.searchButton .material-symbols-outlined{font-size:25px}
+        /* ===== 上部ステータス & クイックアクション ===== */
+        .top-status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
 
-/* ===== AND OR NOT スライダー ===== */
-.modeWrap{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
-.modeSlider{
-  position:relative;width:min(390px,100%);height:48px;border:1px solid #777;border-radius:0;
-  background:transparent;touch-action:none;user-select:none;overflow:hidden;cursor:ew-resize;
-}
-.modeTrack{position:absolute;inset:0;background:transparent}
-.modeKnob{
-  position:absolute;top:0;left:0;width:33.3333%;height:100%;
-  background:var(--accent-soft);border-right:1px solid #aaa;
-  transition:left .16s ease;z-index:0;
-}
-.modeSlider[data-mode="or"] .modeKnob{left:33.3333%}
-.modeSlider[data-mode="not"] .modeKnob{left:66.6667%}
-.modeLabel{
-  position:relative;z-index:1;display:inline-flex;width:33.3333%;height:100%;
-  align-items:center;justify-content:center;color:var(--muted);font-size:19px;font-weight:400;
-}
-.modeSlider[data-mode="and"] .modeLabel.and,
-.modeSlider[data-mode="or"] .modeLabel.or,
-.modeSlider[data-mode="not"] .modeLabel.not{color:var(--text);font-weight:600}
-.modeHint{font-size:12px;color:var(--muted);text-align:right;flex:1;white-space:nowrap}
+        .status-metrics {
+            display: flex;
+            gap: 16px;
+            align-items: baseline;
+        }
 
-/* ===== 検索オプション ===== */
-.optionGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 18px}
-.checkOption{
-  position:relative;display:flex;align-items:center;gap:9px;min-height:51px;
-  padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:transparent;
-  color:var(--text);cursor:pointer;transition:.15s ease;
-}
-.checkOption:hover{background:var(--panel);border-color:#999}
-.checkOption input{position:absolute;opacity:0;pointer-events:none}
-.checkIcon{font-size:23px;color:var(--muted);flex:0 0 auto}
-.checkIcon.checked{display:none;color:var(--accent);font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
-.checkOption input:checked~.unchecked{display:none}
-.checkOption input:checked~.checked{display:inline-block}
-.checkText{font-size:13px;line-height:1.35}
-.checkSub{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+        .metric-item {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--muted-color);
+        }
 
-/* ===== フィルター ===== */
-.filterDetails{border-top:1px solid var(--line2);padding-top:14px;margin-top:5px}
-.filterDetails summary{
-  list-style:none;cursor:pointer;font-size:14px;color:var(--text);font-weight:500;
-  display:flex;align-items:center;gap:6px;padding:4px 0 10px;
-}
-.filterDetails summary::-webkit-details-marker{display:none}
-.filterGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 13px}
-.filterField{min-width:0}
-.filterField.wide{grid-column:1/-1}
-.filterField label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
-.filterField input,.filterField select{
-  width:100%;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--text);
-  padding:7px 8px;font-size:13px;
-}
-.filterActions{display:flex;gap:8px;margin-top:12px}
-.ghostBtn{
-  border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--text);
-  padding:8px 11px;display:inline-flex;align-items:center;justify-content:center;gap:5px;
-}
-.ghostBtn:hover{background:var(--soft)}
-.primaryBtn{
-  border:1px solid var(--text);border-radius:4px;background:var(--text);color:var(--left);
-  padding:8px 15px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
-}
-.primaryBtn:hover{opacity:.85}
+        .metric-item span {
+            font-size: 22px;
+            color: var(--text-color);
+            margin-right: 2px;
+        }
 
-/* ===== データ進捗 ===== */
-.progress{height:3px;background:var(--line2);margin-top:17px;overflow:hidden}
-.progress div{height:100%;width:0;background:var(--accent);transition:width .15s}
-.status{min-height:22px;margin-top:8px;color:var(--muted);font-size:11px}
-.history{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-.history button{border:0;background:var(--soft);color:var(--muted);padding:3px 7px;border-radius:3px;font-size:11px}
+        .quick-actions {
+            display: flex;
+            gap: 16px;
+        }
 
-/* ===== 左ペイン下部の補助 ===== */
-.sideSection{border-top:1px solid var(--line2);margin-top:20px;padding-top:16px}
-.sideTitle{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;margin-bottom:10px}
-.sideTitle .material-symbols-outlined{font-size:20px}
-.stats2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.statBox{border:1px solid var(--line);padding:9px 10px;background:transparent}
-.statBox strong{display:block;font-size:21px;font-weight:500}
-.statBox span{font-size:10px;color:var(--muted)}
-.languageGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.languageButton{
-  min-width:0;border:1px solid var(--line);background:transparent;color:var(--text);
-  padding:7px 5px;border-radius:4px;font-size:11px;display:flex;align-items:center;justify-content:center;gap:3px;
-}
-.languageButton .material-symbols-outlined{font-size:16px}
-.languageButton.active{border-color:var(--text);background:var(--text);color:var(--left)}
-.fileNote{font-size:10px;line-height:1.5;color:var(--muted);margin-top:8px}
-.wide{width:100%}
+        .action-link {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
+        }
 
-/* ===== 右上ヘッダー ===== */
-.contentTop{
-  display:flex;align-items:flex-start;justify-content:space-between;gap:20px;
-  min-height:72px;border-bottom:1px solid var(--line2);padding-bottom:15px;margin-bottom:20px;
-}
-.contentTitle{font-size:28px;font-weight:500;letter-spacing:-.035em}
-.contentTitle small{font-size:13px;color:var(--muted);font-weight:300;display:block;margin-top:3px}
-.rightMetrics{display:flex;gap:25px;align-items:baseline;color:var(--muted)}
-.rightMetrics strong{font-size:25px;color:var(--text);font-weight:400}
-.resultLine{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:11px}
-.resultLine .count{font-size:16px}
-.resultLine .timing{font-size:11px;color:var(--muted)}
-.toolbar{display:flex;gap:7px;align-items:center;justify-content:flex-end;margin-bottom:11px;flex-wrap:wrap}
-.toolbar select,.toolbar button{
-  border:1px solid var(--line);background:transparent;color:var(--text);border-radius:3px;
-  padding:5px 7px;font-size:11px;
-}
-.toolbar label{display:flex;align-items:center;gap:4px;color:var(--muted);font-size:11px}
+        .action-link:hover {
+            color: var(--accent-color);
+        }
 
-/* ===== 結果カード：スクショの平面的な印象 ===== */
-.result{
-  padding:15px 0 18px;border-bottom:1px solid var(--line2);margin-bottom:0;background:transparent;
-}
-.result.selected{background:var(--accent-soft);padding-left:10px;padding-right:10px}
-.threadtitle{
-  appearance:none;border:0;background:none;color:var(--text);font-size:14px;font-weight:600;
-  padding:0;text-align:left;
-}
-.threadtitle:hover{color:var(--accent)}
-.meta{font-size:11px;color:var(--muted);margin:4px 0 7px;overflow-wrap:anywhere}
-.body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;font-size:14px;max-height:240px;overflow:auto}
-.body.expanded{max-height:none}
-.result footer{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
-.result footer button{
-  border:0;background:transparent;color:var(--muted);font-size:11px;padding:3px 0;
-}
-.result footer button:hover{color:var(--text)}
-.linkbutton{border:0;background:none;color:var(--accent);padding:0;text-align:left}
-mark{background:var(--mark);color:var(--text);border-radius:1px;padding:0 1px}
-.empty{text-align:center;padding:90px 20px;color:var(--muted);font-size:13px}
-.empty strong{display:block;color:var(--text);font-size:18px;margin-bottom:6px}
-.pager{display:flex;justify-content:center;align-items:center;gap:10px;margin:22px 0}
-.pager button{border:1px solid var(--line);background:transparent;color:var(--text);padding:7px 10px;border-radius:3px;display:flex;align-items:center;gap:3px}
-.pager input{width:55px;border:1px solid var(--line);background:transparent;color:var(--text);padding:5px;border-radius:3px}
+        /* ===== 検索セクション ===== */
+        .search-section {
+            margin-bottom: 20px;
+        }
 
-/* ===== 年別分布 ===== */
-.timeline{border-bottom:1px solid var(--line2);padding:7px 0 12px;margin-bottom:7px}
-.timeline summary{cursor:pointer;color:var(--muted);font-size:11px}
-.bars{height:72px;display:flex;align-items:end;gap:2px;padding:9px 0 0}
-.bar{flex:1;min-width:3px;border:0;background:var(--accent);padding:0;border-radius:1px 1px 0 0}
-.barlabels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted)}
+        .search-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
 
-/* ===== コメント欄 ===== */
-.commentView{display:none}
-.commentView.active{display:block}
-.commentComposer{
-  border:1px solid var(--line);background:transparent;padding:14px;margin-bottom:18px;
-}
-.replyTarget{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  background:var(--accent-soft);padding:7px 9px;margin-bottom:8px;font-size:11px;color:var(--text);
-}
-.replyTarget button{border:0;background:transparent;color:var(--muted);padding:2px}
-.formInput,.formTextarea{
-  width:100%;border:1px solid var(--line);background:transparent;color:var(--text);border-radius:3px;
-  padding:8px 9px;font-size:13px;margin-bottom:7px;outline:none;
-}
-.formTextarea{min-height:90px;resize:vertical;line-height:1.6}
-.commentTools{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.commentHint{font-size:10px;color:var(--muted)}
-.commentCard{
-  border-bottom:1px solid var(--line2);padding:14px 0;position:relative;
-}
-.commentCard.reply{margin-left:18px;padding-left:12px;border-left:2px solid var(--accent)}
-.commentHeader{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:10px;margin-bottom:5px}
-.commentAuthor{font-size:13px;color:var(--text);font-weight:600}
-.commentText{font-size:13px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:9px}
-.mentionTag{color:var(--accent);font-weight:600}
-.commentActions{display:flex;gap:13px;align-items:center;flex-wrap:wrap}
-.commentAction{
-  border:0;background:transparent;color:var(--muted);padding:2px 0;font-size:10px;
-  display:inline-flex;align-items:center;gap:3px;
-}
-.commentAction:hover{color:var(--text)}
-.commentAction.like.active{color:var(--like)}
-.commentAction.dislike.active{color:var(--danger)}
-.commentAction .material-symbols-outlined{font-size:17px}
+        .search-label::before {
+            content: "■";
+            font-size: 12px;
+        }
 
-/* ===== その他 ===== */
-.otherView{display:none}
-.otherView.active{display:block}
-.otherGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.otherPanel{border:1px solid var(--line);padding:14px;background:transparent}
-.otherPanel h3{font-size:14px;font-weight:600;margin:0 0 11px;display:flex;align-items:center;gap:6px}
-.otherPanel p{font-size:11px;color:var(--muted);line-height:1.6}
-.otherActions{display:flex;flex-direction:column;gap:7px}
-.otherActions button{width:100%;text-align:left;border:1px solid var(--line);background:transparent;color:var(--text);padding:9px;border-radius:3px;display:flex;align-items:center;gap:7px;font-size:12px}
-.otherActions button:hover{background:var(--soft)}
-.otherPanel select{width:100%;border:1px solid var(--line);background:transparent;color:var(--text);padding:8px;border-radius:3px;font-size:12px}
-.otherPanel + .otherPanel{margin-top:0}
-.legacy-tabs{display:none}
+        .search-input-wrapper {
+            position: relative;
+            margin-bottom: 12px;
+        }
 
-/* ===== ボトムナビ ===== */
-.bottomNav{
-  position:fixed;z-index:50;left:49.5vw;right:0;bottom:0;height:112px;
-  background:var(--nav);display:grid;grid-template-columns:repeat(3,1fr);
-  border-top:1px solid #c2c2c2;
-}
-.navButton{
-  border:0;border-radius:0;background:transparent;color:#3f3f3f;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-  font-weight:600;font-size:15px;
-}
-body.dark .navButton{color:#ddd}
-.navButton .material-symbols-outlined{font-size:43px;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 40}
-.navButton.active{background:var(--nav-active);color:var(--text)}
-.navButton.active .material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 40}
-.navButton:hover{background:rgba(255,255,255,.25)}
+        .search-input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            outline: none;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
 
-/* ===== 中央の浮遊検索ボタンとリング ===== */
-.floatingSearch{
-  position:fixed;z-index:55;left:49.5vw;top:50%;transform:translate(-50%,-50%);
-  width:112px;height:112px;border:1px solid #8e8e8e;border-radius:50%;
-  background:var(--right);color:#3d3d3d;display:grid;place-items:center;
-  box-shadow:0 0 0 1px rgba(0,0,0,.02);overflow:visible;
-}
-.floatingSearch::before,.floatingSearch::after{
-  content:"";position:absolute;border:1px solid #b8b8b8;border-radius:50%;pointer-events:none;
-}
-.floatingSearch::before{width:245px;height:245px;left:-68px;top:-68px;opacity:.7;animation:ring 4.5s linear infinite}
-.floatingSearch::after{width:210px;height:210px;left:-51px;top:-51px;opacity:.28;animation:ringReverse 6s linear infinite}
-.floatingSearch .material-symbols-outlined{font-size:56px;font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 48}
-.floatingSearch:hover{background:var(--soft)}
-@keyframes ring{to{transform:rotate(360deg)}}
-@keyframes ringReverse{to{transform:rotate(-360deg)}}
+        .search-input:focus {
+            border-color: var(--accent-color);
+        }
 
-/* ===== メニュー（モバイル用） ===== */
-.drawerBackdrop{display:none}
-.drawerClose{display:none}
+        /* ===== モード切替（2値スライダー / AND/OR） ===== */
+        .mode-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-/* ===== ダイアログ ===== */
-dialog{
-  border:1px solid var(--line);background:var(--right);color:var(--text);
-  padding:20px;width:min(980px,94vw);max-height:90vh;border-radius:6px;
-}
-dialog::backdrop{background:rgba(0,0,0,.48)}
-.dialoghead{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  border-bottom:1px solid var(--line2);padding-bottom:10px;margin-bottom:13px;
-}
-.dialoghead h2{font-size:17px;font-weight:600;margin:0;display:flex;align-items:center;gap:6px}
-.dialoghead button{border:0;background:transparent;color:var(--text);padding:5px;display:flex;align-items:center;gap:4px}
-.help{font-size:13px;line-height:1.8}
-.helpSection{border-bottom:1px solid var(--line2);padding:10px 0 14px}
-.helpTitle{display:flex;align-items:center;gap:6px;font-size:14px;margin-bottom:7px}
-.help p{margin:7px 0}
-.helpNote{border-left:3px solid var(--accent);padding-left:10px}
-#reader{width:min(1100px,96vw);height:92vh;max-height:92vh}
-#reader .dialoghead{position:sticky;top:-20px;background:var(--right);z-index:2}
-#readerRows{overflow:auto}
-.readerControls{width:100%;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
-.readerControls button,.readerControls input,.readerControls select{
-  border:1px solid var(--line);background:transparent;color:var(--text);padding:6px 8px;border-radius:3px;font-size:11px
-}
-.readerControls input{width:65px}
-.readerBottom{display:flex;justify-content:center;gap:8px;padding-top:14px}
-.toast{
-  position:fixed;z-index:200;left:50%;bottom:125px;transform:translateX(-50%);
-  max-width:88vw;background:#202020;color:#fff;padding:9px 14px;border-radius:3px;font-size:11px;
-}
+        .mode-slider {
+            display: inline-flex;
+            background-color: var(--border-color);
+            border-radius: 6px;
+            padding: 3px;
+            cursor: pointer;
+            user-select: none;
+            width: 120px;
+            position: relative;
+        }
 
-/* ===== レスポンシブ ===== */
-@media(max-width:900px){
-  .app{grid-template-columns:1fr}
-  .side{
-    position:fixed;z-index:80;left:0;top:0;width:min(430px,92vw);transform:translateX(-102%);
-    transition:transform .2s ease;box-shadow:10px 0 30px rgba(0,0,0,.12);
-  }
-  .side.open{transform:translateX(0)}
-  .drawerBackdrop.open{display:block;position:fixed;z-index:70;inset:0;background:rgba(0,0,0,.35)}
-  .drawerClose{
-    display:flex;position:absolute;right:10px;top:10px;z-index:2;width:38px;height:38px;
-    border:1px solid var(--line);background:var(--left);color:var(--text);align-items:center;justify-content:center;
-  }
-  .content{padding:22px 18px 130px}
-  .bottomNav{left:0}
-  .floatingSearch{left:50%;width:82px;height:82px}
-  .floatingSearch::before{width:180px;height:180px;left:-50px;top:-50px}
-  .floatingSearch::after{width:150px;height:150px;left:-34px;top:-34px}
-  .floatingSearch .material-symbols-outlined{font-size:43px}
-  .menuButtonMobile{display:flex!important}
-}
-@media(min-width:901px){.menuButtonMobile{display:none!important}}
-@media(max-width:620px){
-  .side{padding:20px 18px 140px}
-  .statusTop{margin-bottom:24px}
-  .metrics{gap:11px}
-  .metric{font-size:13px}
-  .metric strong{font-size:23px}
-  .quick{gap:11px}
-  .quick button{font-size:12px}
-  .brandBlock{margin-bottom:25px}
-  .searchbox input{font-size:21px}
-  .modeWrap{display:block}
-  .modeSlider{width:100%}
-  .modeHint{display:block;margin-top:5px;text-align:right}
-  .optionGrid{grid-template-columns:1fr}
-  .filterGrid{grid-template-columns:1fr}
-  .contentTop{min-height:58px}
-  .contentTitle{font-size:22px}
-  .rightMetrics{gap:12px}
-  .rightMetrics strong{font-size:20px}
-  .otherGrid{grid-template-columns:1fr}
-  .bottomNav{height:94px}
-  .navButton{font-size:12px}
-  .navButton .material-symbols-outlined{font-size:36px}
-}
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;transition-duration:.001ms!important}
-}
+        .mode-option {
+            flex: 1;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 2;
+            transition: color 0.2s ease;
+            color: var(--muted-color);
+        }
 
+        .mode-option.active {
+            color: #ffffff;
+        }
+
+        .slider-indicator {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: calc(50% - 3px);
+            height: calc(100% - 6px);
+            background-color: var(--accent-color);
+            border-radius: 4px;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+        }
+
+        .mode-slider[data-mode="or"] .slider-indicator {
+            transform: translateX(100%);
+        }
+
+        /* ===== タブコンテンツ表示エリア ===== */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ===== 検索結果・レスカード ===== */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: var(--muted-color);
+        }
+
+        .result-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .thread-title {
+            font-size: 14px;
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .res-meta {
+            font-size: 12px;
+            color: var(--muted-color);
+            margin-bottom: 8px;
+        }
+
+        .res-body {
+            font-size: 15px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        mark {
+            background-color: var(--mark-bg);
+            color: var(--text-color);
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        /* ===== コメント欄スタイル ===== */
+        .comment-form-panel {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 20px;
+        }
+
+        .reply-target-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--accent-light);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+        }
+
+        .reply-target-bar button {
+            background: none;
+            border: none;
+            color: var(--muted-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-input-name {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin-bottom: 8px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            height: 80px;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            resize: vertical;
+            margin-bottom: 8px;
+            outline: none;
+        }
+
+        .form-textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        .form-submit-row {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .comment-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .comment-card.reply-card {
+            margin-left: 20px;
+            border-left: 3px solid var(--accent-color);
+            background-color: var(--bg-color);
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--muted-color);
+            margin-bottom: 6px;
+        }
+
+        .comment-author {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+        .comment-text {
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .mention-tag {
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-right: 4px;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 8px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--muted-color);
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.15s;
+        }
+
+        .action-btn:hover {
+            color: var(--text-color);
+        }
+
+        .action-btn.like-btn:hover, .action-btn.like-btn.active {
+            color: var(--like-color);
+        }
+
+        .action-btn.dislike-btn:hover, .action-btn.dislike-btn.active {
+            color: var(--dislike-color);
+        }
+
+        .action-btn .material-symbols-outlined {
+            font-size: 18px;
+        }
+
+        /* ===== その他（設定・DB管理）画面 ===== */
+        .panel {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted-color);
+            margin-bottom: 6px;
+        }
+
+        select, button.btn {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+
+        button.btn-primary {
+            background-color: var(--accent-color);
+            color: #ffffff;
+            border: none;
+            font-weight: bold;
+        }
+
+        button.btn-danger {
+            background-color: #ff4d4f;
+            color: #ffffff;
+            border: none;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* ===== ボトムナビゲーションバー ===== */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: var(--bottom-nav-bg);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: none;
+            border: none;
+            color: var(--muted-color);
+            cursor: pointer;
+            gap: 2px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .nav-item.active {
+            color: var(--text-color);
+            background-color: var(--bottom-nav-active);
+            font-weight: bold;
+        }
+
+        .nav-item .material-symbols-outlined {
+            font-size: 24px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+        }
+
+        /* ===== ダイアログ ===== */
+        dialog {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            padding: 20px;
+            max-width: 90vw;
+            width: 480px;
+            margin: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        dialog::backdrop {
+            background: rgba(0,0,0,0.5);
+        }
+
+        .dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
 
-<div class="app">
-  <aside class="side" id="searchSide">
-    <button class="drawerClose" id="drawerClose" aria-label="検索パネルを閉じる"><span class="material-symbols-outlined">close</span></button>
+    <div class="container">
+        <!-- 上部ステータス表示 & ヘルプ・ダーク切り替え -->
+        <div class="top-status-bar">
+            <div class="status-metrics">
+                <div class="metric-item"><span id="resultCount">---</span>件</div>
+                <div class="metric-item"><span id="threadCount">---</span>スレッド</div>
+                <div class="metric-item"><span id="searchTime">---</span>秒</div>
+            </div>
+            <div class="quick-actions">
+                <button id="darkBtn" class="action-link">ダーク</button>
+                <button id="helpBtn" class="action-link">使い方</button>
+            </div>
+        </div>
 
-    <div class="statusTop">
-      <div class="metrics">
-        <div class="metric"><strong id="resultCount">---</strong> 件</div>
-        <div class="metric"><strong id="threadCount">---</strong> スレッド</div>
-        <div class="metric"><strong id="searchTime">---</strong> 秒</div>
-      </div>
-      <div class="quick">
-        <button id="theme"><span class="material-symbols-outlined">dark_mode</span><span>ダーク</span></button>
-        <button id="help"><span class="material-symbols-outlined">help</span><span>使い方</span></button>
-        <button id="languageOpen"><span class="material-symbols-outlined">language</span><span>言語</span></button>
-      </div>
+        <!-- タブ1：ホーム（検索機能） -->
+        <div id="tabHome" class="tab-content active">
+            <div class="search-section">
+                <div class="search-label">探したい言葉を入力</div>
+                <div class="search-input-wrapper">
+                    <input type="search" id="searchInput" class="search-input" placeholder="ここに検索内容を入力..." autocomplete="off">
+                </div>
+                <div class="mode-toggle-container">
+                    <!-- AND / OR 切替スライダー -->
+                    <div class="mode-slider" id="modeSlider" data-mode="and" role="button" tabindex="0">
+                        <div class="slider-indicator"></div>
+                        <div class="mode-option active" id="optAnd">AND</div>
+                        <div class="mode-option" id="optOr">OR</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 検索結果リスト -->
+            <div id="resultsArea">
+                <div class="results-header">
+                    <span>検索結果一覧</span>
+                </div>
+                <div id="resultsList">
+                    <div style="text-align: center; color: var(--muted-color); padding: 40px 0;">
+                        データを読み込み中...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- タブ2：コメント欄 -->
+        <div id="tabComments" class="tab-content">
+            <!-- コメント投稿フォーム -->
+            <div class="comment-form-panel">
+                <div id="replyTargetBar" class="reply-target-bar hidden">
+                    <span id="replyTargetText">@名無しさん へ返信中</span>
+                    <button id="cancelReplyBtn"><span class="material-symbols-outlined">close</span></button>
+                </div>
+                <input type="text" id="commentAuthorInput" class="form-input-name" placeholder="お名前 (空欄で『名無しさん』)" maxlength="20">
+                <textarea id="commentTextInput" class="form-textarea" placeholder="コメントを入力... (@ユーザー名 や >>番号 でメンション)"></textarea>
+                <div class="form-submit-row">
+                    <button id="postCommentBtn" class="btn btn-primary" style="width: auto; padding: 8px 20px;">投稿する</button>
+                </div>
+            </div>
+
+            <!-- コメント一覧 -->
+            <div id="commentsList">
+                <!-- JavaScriptでレンダリングされます -->
+            </div>
+        </div>
+
+        <!-- タブ3：その他（データ管理 & 設定） -->
+        <div id="tabSettings" class="tab-content">
+            <div class="panel">
+                <div class="panel-title">
+                    <span class="material-symbols-outlined">database</span> データベース情報
+                </div>
+                <p style="font-size: 14px; margin-bottom: 8px;">総スレ数: <strong id="dbThreads">0</strong></p>
+                <p style="font-size: 14px; margin-bottom: 12px;">総レス数: <strong id="dbRes">0</strong></p>
+                <p id="dbStatusNote" style="font-size: 12px; color: var(--muted-color);">データを解凍・読み込み中...</p>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">
+                    <span class="material-symbols-outlined">tune</span> 表示設定
+                </div>
+                <div class="form-group">
+                    <label for="sortOrder">ソート順</label>
+                    <select id="sortOrder">
+                        <option value="desc">新しい順</option>
+                        <option value="asc">古い順</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">
+                    <span class="material-symbols-outlined">settings</span> データ管理
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <input type="file" id="fileInput" class="file-input" accept=".json">
+                    <button id="loadBtn" class="btn btn-primary">追加ローカルJSON読込</button>
+                    <button id="clearBtn" class="btn btn-danger">データをクリア</button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="brandBlock brand">
-      <div class="kicker">ARCHIVE SEARCH</div>
-      <h1>クッキー☆<br>元スレ検索室</h1>
-      <p>収録された本スレの全文を端末内で検索します。</p>
-    </div>
+    <!-- ボトムナビゲーションバー (ホーム / コメント欄 / その他) -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" id="navHomeTab">
+            <span class="material-symbols-outlined">home</span>
+            <span class="nav-label">ホーム</span>
+        </button>
+        <button class="nav-item" id="navCommentsTab">
+            <span class="material-symbols-outlined">forum</span>
+            <span class="nav-label">コメント欄</span>
+        </button>
+        <button class="nav-item" id="navSettingsTab">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="nav-label">その他</span>
+        </button>
+    </nav>
 
-    <form id="searchForm">
-      <label class="searchHeading" for="q">探したい言葉を入力</label>
-      <div class="searchbox">
-        <input id="q" type="search" placeholder="ここに検索内容を入力…" autocomplete="off" maxlength="500">
-        <button class="searchButton" id="search" disabled aria-label="検索"><span class="material-symbols-outlined">search</span></button>
-        <button type="button" id="cancel" class="ghostBtn hidden" aria-label="検索を中止">中止</button>
-      </div>
-
-      <div class="modeWrap">
-        <div class="modeSlider" id="modeSlider" data-mode="and" role="slider" aria-label="検索方式" aria-valuemin="0" aria-valuemax="2" aria-valuenow="0" aria-valuetext="AND検索" tabindex="0">
-          <div class="modeTrack" aria-hidden="true"></div><div class="modeKnob" aria-hidden="true"></div>
-          <span class="modeLabel and">すべて含む</span><span class="modeLabel or">いずれか含む</span><span class="modeLabel not">含まない</span>
-          <span class="srOnly" id="modeLive">検索方式: AND</span>
+    <!-- 使い方ヘルプダイアログ -->
+    <dialog id="helpDialog">
+        <div class="dialog-header">
+            <h3><span class="material-symbols-outlined" style="vertical-align: middle;">help</span> 使い方ガイド</h3>
+            <button id="closeHelpBtn" style="border:none; background:none; cursor:pointer;"><span class="material-symbols-outlined">close</span></button>
         </div>
-        <div class="modeHint">スライドして AND・OR・NOT を切り替え</div>
-      </div>
-
-      <label class="srOnly"><input type="radio" name="mode" value="and" checked>AND</label>
-      <label class="srOnly"><input type="radio" name="mode" value="or">OR</label>
-      <label class="srOnly"><input type="radio" name="mode" value="not">NOT</label>
-
-      <div class="optionGrid" aria-label="検索オプション">
-        <label class="checkOption" for="fold">
-          <input id="fold" type="checkbox" checked>
-          <span class="material-symbols-outlined checkIcon unchecked">check_box_outline_blank</span>
-          <span class="material-symbols-outlined checkIcon checked">check_box</span>
-          <span class="checkText">全角・半角／英字の大小を区別しない<span class="checkSub">表記ゆれをまとめて検索</span></span>
-        </label>
-        <label class="checkOption" for="highlight">
-          <input id="highlight" type="checkbox" checked>
-          <span class="material-symbols-outlined checkIcon unchecked">check_box_outline_blank</span>
-          <span class="material-symbols-outlined checkIcon checked">check_box</span>
-          <span class="checkText">検索語を強調表示<span class="checkSub">一致箇所をハイライト</span></span>
-        </label>
-      </div>
-
-      <details class="filterDetails">
-        <summary><span class="material-symbols-outlined">tune</span> 詳細な絞り込み</summary>
-        <div class="filterGrid">
-          <div class="filterField wide"><label for="thread">対象スレッド</label><select id="thread"><option value="">すべてのスレッド</option></select></div>
-          <div class="filterField"><label for="titleFilter">スレッド名に含む語句</label><input id="titleFilter" placeholder="例：総合スレ201"></div>
-          <div class="filterField"><label for="idFilter">投稿者ID（完全一致）</label><input id="idFilter" placeholder="ID: を除いて入力" spellcheck="false"></div>
-          <div class="filterField"><label for="from">開始日</label><input id="from" type="date"></div>
-          <div class="filterField"><label for="to">終了日</label><input id="to" type="date"></div>
-          <div class="filterField wide"><label for="exclude">除外語句</label><input id="exclude" placeholder="スペースで区切る"></div>
-          <div class="filterField wide"><label for="scope">検索する場所</label><select id="scope"><option value="body">本文</option><option value="all">本文＋投稿ヘッダー</option></select></div>
+        <div style="font-size: 14px; line-height: 1.6; color: var(--text-color);">
+            <p><strong>1. ホーム（検索）</strong><br>キーワードでレスを検索できます。AND/ORスライダーで条件を調整可能です。</p>
+            <br>
+            <p><strong>2. コメント欄</strong><br>ユーザー同士で語り合えるスペースです。「いいね」「悪いね」「返信」機能や `@名前` でのメンションが利用できます。</p>
+            <br>
+            <p><strong>3. その他（データ管理）</strong><br>スレッドデータ（JSON）の追加取り込みや削除、表示順の調整が行えます。</p>
         </div>
-        <div class="filterActions">
-          <button type="button" id="reset" class="ghostBtn"><span class="material-symbols-outlined">restart_alt</span>リセット</button>
-          <button type="submit" class="primaryBtn">検索する</button>
-        </div>
-      </details>
-      <div class="history" id="history"></div>
-    </form>
+    </dialog>
 
-    <div class="progress" id="progress"><div></div></div>
-    <p class="status" id="status" role="status" aria-live="polite">データを展開しています…</p>
+    <script>
+        // State
+        let dbData = [];
+        let searchMode = 'and'; // 'and' or 'or'
+        let currentReplyTarget = null; // { id, name }
 
-    <section class="sideSection langPanel">
-      <h2 class="sideTitle"><span class="material-symbols-outlined">translate</span>言語設定</h2>
-      <div class="languageGrid" id="languageGrid">
-        <button type="button" class="languageButton active" data-lang="ja"><span class="material-symbols-outlined">translate</span>日本語</button>
-        <button type="button" class="languageButton" data-lang="en"><span class="material-symbols-outlined">language</span>English</button>
-        <button type="button" class="languageButton" data-lang="ru"><span class="material-symbols-outlined">language</span>Русский</button>
-        <button type="button" class="languageButton" data-lang="zh-CN"><span class="material-symbols-outlined">language</span>简体中文</button>
-        <button type="button" class="languageButton" data-lang="zh-TW"><span class="material-symbols-outlined">language</span>繁體中文</button>
-        <button type="button" class="languageButton" data-lang="ko"><span class="material-symbols-outlined">language</span>한국어</button>
-      </div>
-      <p class="fileNote">表示言語を切り替えます。検索データ本文は原文のままです。</p>
-    </section>
+        // 初期サンプルコメントデータ
+        let commentsData = [
+            {
+                id: 1,
+                parentId: null,
+                author: "語録研究者",
+                text: "本スレの過去ログ検索が快適で助かります！",
+                time: "2026/09/18 10:15",
+                likes: 5,
+                dislikes: 0
+            },
+            {
+                id: 2,
+                parentId: 1,
+                author: "名無しさん",
+                text: "@語録研究者 本当に便利ですね。AND検索の挙動もスムーズです。",
+                time: "2026/09/18 11:02",
+                likes: 2,
+                dislikes: 0
+            }
+        ];
 
-    <section class="sideSection">
-      <h2 class="sideTitle"><span class="material-symbols-outlined">database</span>収録データ</h2>
-      <div class="stats2">
-        <div class="statBox"><strong id="postCount">—</strong><span>投稿</span></div>
-        <div class="statBox"><strong id="threadCountSide">—</strong><span>スレッド</span></div>
-      </div>
-      <p id="period" class="fileNote">読み込み準備中</p>
-    </section>
+        // DOM Elements
+        const body = document.body;
+        const searchInput = document.getElementById('searchInput');
+        const modeSlider = document.getElementById('modeSlider');
+        const optAnd = document.getElementById('optAnd');
+        const optOr = document.getElementById('optOr');
+        const resultsList = document.getElementById('resultsList');
+        const resultCount = document.getElementById('resultCount');
+        const threadCount = document.getElementById('threadCount');
+        const searchTime = document.getElementById('searchTime');
 
-    <section class="sideSection">
-      <h2 class="sideTitle"><span class="material-symbols-outlined">verified_user</span>データの扱い</h2>
-      <p class="fileNote">原文をそのまま収録しています。内容の真偽を検証した情報ではありません。画像やリンク先は自動読み込みしません。</p>
-      <button id="backup" class="ghostBtn wide" style="margin-top:9px"><span class="material-symbols-outlined">upload_file</span>お気に入りをバックアップ</button>
-      <button id="restore" class="ghostBtn wide" style="margin-top:6px"><span class="material-symbols-outlined">file_open</span>バックアップを読み込む</button>
-      <input id="backupFile" type="file" accept=".json" hidden>
-    </section>
-  </aside>
+        const darkBtn = document.getElementById('darkBtn');
+        const helpBtn = document.getElementById('helpBtn');
+        const helpDialog = document.getElementById('helpDialog');
+        const closeHelpBtn = document.getElementById('closeHelpBtn');
 
-  <div class="drawerBackdrop" id="drawerBackdrop"></div>
+        // Navigation Tabs
+        const navHomeTab = document.getElementById('navHomeTab');
+        const navCommentsTab = document.getElementById('navCommentsTab');
+        const navSettingsTab = document.getElementById('navSettingsTab');
+        const tabHome = document.getElementById('tabHome');
+        const tabComments = document.getElementById('tabComments');
+        const tabSettings = document.getElementById('tabSettings');
 
-  <main class="content">
-    <button id="menuButton" class="menuButtonMobile ghostBtn" style="display:none;position:fixed;right:12px;top:12px;z-index:60;width:42px;height:42px;padding:0;background:var(--right)" aria-label="検索パネルを開く">
-      <span class="material-symbols-outlined">menu</span>
-    </button>
+        // Comments Elements
+        const commentsList = document.getElementById('commentsList');
+        const commentAuthorInput = document.getElementById('commentAuthorInput');
+        const commentTextInput = document.getElementById('commentTextInput');
+        const postCommentBtn = document.getElementById('postCommentBtn');
+        const replyTargetBar = document.getElementById('replyTargetBar');
+        const replyTargetText = document.getElementById('replyTargetText');
+        const cancelReplyBtn = document.getElementById('cancelReplyBtn');
 
-    <header class="contentTop">
-      <div>
-        <div class="contentTitle" id="contentTitle">検索結果</div>
-        <div class="contentTitle"><small id="contentSubtitle">スレッド　---　秒</small></div>
-      </div>
-      <div class="rightMetrics">
-        <span><strong id="rightResultCount">---</strong> 件</span>
-        <span><strong id="rightThreadCount">---</strong> スレッド</span>
-      </div>
-    </header>
+        // Settings Elements
+        const fileInput = document.getElementById('fileInput');
+        const loadBtn = document.getElementById('loadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const sortOrder = document.getElementById('sortOrder');
+        const dbThreads = document.getElementById('dbThreads');
+        const dbRes = document.getElementById('dbRes');
+        const dbStatusNote = document.getElementById('dbStatusNote');
 
-    <div class="legacy-tabs" aria-hidden="true">
-      <button class="tab active" data-tab="search" aria-pressed="true">投稿検索</button>
-      <button class="tab" data-tab="threads" aria-pressed="false">スレッド一覧</button>
-      <button class="tab" data-tab="favorites" aria-pressed="false">お気に入り <span id="favCount">0</span></button>
-    </div>
+        // Base64 + Gzip 解凍用関数
+        async function decompressGzipBase64(base64Str) {
+            const binaryString = atob(base64Str);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
 
-    <section id="homeView" class="homeView">
-      <div class="resultLine">
-        <span class="count" id="homeResultLabel">検索結果一覧</span>
-        <span class="timing" id="timing"></span>
-      </div>
-      <div id="timeline" class="timeline hidden">
-        <details><summary>検索結果の年別分布（棒をクリックして絞り込み）</summary><div id="bars" class="bars"></div><div id="barlabels" class="barlabels"></div></details>
-      </div>
-      <div class="toolbar">
-        <label>並び順 <select id="sort"><option value="source">元データ順</option><option value="new">新しい順（日付）</option><option value="old">古い順（日付）</option></select></label>
-        <label>表示 <select id="size"><option>30</option><option>50</option><option>100</option></select></label>
-        <button id="export"><span class="material-symbols-outlined">download</span>CSV</button>
-      </div>
-      <div id="results">
-        <div class="empty"><strong>アーカイブを準備しています</strong>初回の展開には少し時間がかかります。</div>
-      </div>
-      <div id="pager" class="pager hidden">
-        <button id="prev"><span class="material-symbols-outlined">chevron_left</span>前へ</button>
-        <label><input type="number" id="page" min="1" value="1" aria-label="ページ番号"> / <span id="pages">1</span></label>
-        <button id="next">次へ<span class="material-symbols-outlined">chevron_right</span></button>
-      </div>
-    </section>
+            const stream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(bytes);
+                    controller.close();
+                }
+            }).pipeThrough(new DecompressionStream('gzip'));
 
-    <section id="commentsView" class="commentView">
-      <div class="resultLine"><span class="count">コメント欄</span><span class="timing">ローカル保存</span></div>
-      <div class="commentComposer">
-        <div id="replyTargetBar" class="replyTarget hidden">
-          <span id="replyTargetText">@名無しさん へ返信中</span>
-          <button id="cancelReplyBtn" aria-label="返信を解除"><span class="material-symbols-outlined">close</span></button>
-        </div>
-        <input id="commentAuthorInput" class="formInput" type="text" maxlength="20" placeholder="お名前（空欄で「名無しさん」）">
-        <textarea id="commentTextInput" class="formTextarea" maxlength="2000" placeholder="コメントを入力… @名前 でメンション"></textarea>
-        <div class="commentTools">
-          <span class="commentHint"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:-3px">alternate_email</span> @名前でメンション　／　返信から相手を指定</span>
-          <button id="postCommentBtn" class="primaryBtn" type="button"><span class="material-symbols-outlined">add_comment</span>投稿する</button>
-        </div>
-      </div>
-      <div id="commentsList"></div>
-    </section>
+            const decompressedBuffer = await new Response(stream).arrayBuffer();
+            return new TextDecoder().decode(decompressedBuffer);
+        }
 
-    <section id="otherView" class="otherView">
-      <div class="resultLine"><span class="count">その他</span><span class="timing">設定・データ管理</span></div>
-      <div class="otherGrid">
-        <section class="otherPanel">
-          <h3><span class="material-symbols-outlined">bookmark</span>保存・閲覧</h3>
-          <div class="otherActions">
-            <button id="openFavoritesBtn"><span class="material-symbols-outlined">bookmark</span>お気に入りを見る <span id="otherFavCount">0</span></button>
-            <button id="openThreadsBtn"><span class="material-symbols-outlined">forum</span>スレッド一覧を見る</button>
-            <button id="returnSearchBtn"><span class="material-symbols-outlined">search</span>検索結果へ戻る</button>
-          </div>
-        </section>
-        <section class="otherPanel">
-          <h3><span class="material-symbols-outlined">tune</span>表示設定</h3>
-          <label for="sortMirror" style="font-size:11px;color:var(--muted)">並び順</label>
-          <select id="sortMirror">
-            <option value="source">元データ順</option><option value="new">新しい順（日付）</option><option value="old">古い順（日付）</option>
-          </select>
-          <p style="margin-top:9px">検索結果側の並び順と同期します。</p>
-        </section>
-      </div>
-      <div class="otherGrid" style="margin-top:12px">
-        <section class="otherPanel">
-          <h3><span class="material-symbols-outlined">database</span>データベース情報</h3>
-          <p>総投稿数：<strong id="dbRes">0</strong></p>
-          <p>総スレッド数：<strong id="dbThreads">0</strong></p>
-          <p id="dbStatusNote" style="margin-top:7px">データを読み込んでいます。</p>
-        </section>
-        <section class="otherPanel">
-          <h3><span class="material-symbols-outlined">translate</span>言語</h3>
-          <div class="languageGrid">
-            <button type="button" class="languageButton active" data-lang="ja">日本語</button>
-            <button type="button" class="languageButton" data-lang="en">English</button>
-            <button type="button" class="languageButton" data-lang="ru">Русский</button>
-            <button type="button" class="languageButton" data-lang="zh-CN">简体中文</button>
-            <button type="button" class="languageButton" data-lang="zh-TW">繁體中文</button>
-            <button type="button" class="languageButton" data-lang="ko">한국어</button>
-          </div>
-        </section>
-      </div>
-      <section class="otherPanel" style="margin-top:12px">
-        <h3><span class="material-symbols-outlined">info</span>このアーカイブについて</h3>
-        <p>収録されたデータのみを検索します。自動更新や外部画像の自動読み込みは行いません。検索・閲覧は端末内で実行されます。</p>
-      </section>
-    </section>
-  </main>
-</div>
+        // data-1.js 〜 data-8.js からのデータ読み込み処理
+        async function loadDataPacks() {
+            const packs = window.__COOKIE_DATA_PACKS || [];
+            if (packs.length === 0) {
+                dbStatusNote.textContent = 'データパックが見つかりませんでした。「追加ローカルJSON読込」をご利用ください。';
+                resultsList.innerHTML = '<div style="text-align: center; color: var(--muted-color); padding: 40px 0;">検索キーワードを入力してください</div>';
+                return;
+            }
 
-<nav class="bottomNav" aria-label="メインナビゲーション">
-  <button class="navButton active" id="navHome"><span class="material-symbols-outlined">home</span><span>ホーム</span></button>
-  <button class="navButton" id="navComments"><span class="material-symbols-outlined">forum</span><span>コメント欄</span></button>
-  <button class="navButton" id="navOther"><span class="material-symbols-outlined">settings</span><span>その他</span></button>
-</nav>
+            let loadedCount = 0;
+            for (let i = 0; i < packs.length; i++) {
+                if (!packs[i]) continue;
+                try {
+                    dbStatusNote.textContent = `データパック解凍中 (${i + 1}/${packs.length})...`;
+                    const jsonStr = await decompressGzipBase64(packs[i]);
+                    const parsed = JSON.parse(jsonStr);
+                    if (Array.isArray(parsed)) {
+                        dbData.push(...parsed);
+                    } else {
+                        dbData.push(parsed);
+                    }
+                    loadedCount++;
+                } catch (e) {
+                    console.error(`Pack ${i + 1} の解凍・読み込みに失敗しました:`, e);
+                }
+            }
 
-<button id="floatingSearch" class="floatingSearch" aria-label="検索を実行"><span class="material-symbols-outlined">chevron_right</span></button>
+            updateDbStats();
+            resultsList.innerHTML = '<div style="text-align: center; color: var(--muted-color); padding: 40px 0;">検索キーワードを入力してください</div>';
+        }
 
-<dialog id="reader" aria-labelledby="readerTitle">
-  <div class="dialoghead">
-    <h2 id="readerTitle"><span class="material-symbols-outlined">forum</span><span>スレッドの全投稿</span></h2>
-    <button data-close="reader" aria-label="閉じる"><span class="material-symbols-outlined">arrow_back</span><span>戻る</span></button>
-    <p class="small" id="readerInfo" role="status"></p>
-    <div class="readerControls">
-      <button id="readerFirst">最初</button><button id="readerPrev">前へ</button>
-      <label>ページ <input id="readerPage" type="number" min="1" value="1"> / <span id="readerPages">1</span></label>
-      <button id="readerNext">次へ</button><button id="readerLast">最後</button>
-      <label>表示 <select id="readerSize"><option>50</option><option selected>100</option><option>200</option></select> 件</label>
-      <form id="readerJumpForm" class="readerControls"><label>レス番号 <input id="readerNumber" type="number" min="1" placeholder="123"></label><button>移動</button></form>
-    </div>
-  </div>
-  <div id="readerRows"></div>
-  <div class="readerBottom"><button id="readerPrevBottom" class="ghostBtn">前のページ</button><button id="readerNextBottom" class="ghostBtn">次のページ</button></div>
-</dialog>
+        // Dark Mode Toggle
+        darkBtn.addEventListener('click', () => {
+            body.classList.toggle('dark');
+        });
 
-<dialog id="helpDialog">
-  <div class="dialoghead"><h2><span class="material-symbols-outlined">menu_book</span><span>使い方</span></h2><button data-close="helpDialog" aria-label="閉じる"><span class="material-symbols-outlined">close</span></button></div>
-  <div class="help">
-    <section class="helpSection"><h3 class="helpTitle"><span class="material-symbols-outlined">search</span>語句を検索</h3><p><b>探したい言葉を入力</b>に語句を入力して検索します。スペース区切りで複数の語句を指定できます。</p><p>スライダーを指またはマウスで動かして <b>AND / OR / NOT</b> を切り替えます。半角二重引用符で囲むと空白を含む語句として扱います。</p></section>
-    <section class="helpSection"><h3 class="helpTitle"><span class="material-symbols-outlined">tune</span>絞り込み</h3><p>スレッド、スレッド名、投稿者ID、期間、除外語句、検索範囲を組み合わせられます。結果内のIDから同じIDを検索することもできます。</p></section>
-    <section class="helpSection"><h3 class="helpTitle"><span class="material-symbols-outlined">forum</span>スレッドを読む</h3><p>投稿のスレッド名から収録されたスレッドを元データ順で閲覧できます。ページ移動、最初・最後、レス番号指定に対応します。</p><p>本文の <code>&gt;&gt;123</code> は該当レスへ移動します。URLは新しいタブで開きます。</p></section>
-    <section class="helpSection"><h3 class="helpTitle"><span class="material-symbols-outlined">bookmark</span>保存・バックアップ</h3><p>お気に入り、検索履歴、配色はブラウザに保存されます。お気に入りはJSONでバックアップ・復元できます。CSVは検索結果全件を出力します。</p></section>
-    <section class="helpSection"><h3 class="helpTitle"><span class="material-symbols-outlined">forum</span>コメント欄</h3><p>コメントはこのブラウザ内に保存されます。いいね・悪いね、メンション、返信が利用できます。サーバーへ公開投稿する機能ではありません。</p></section>
-    <section class="helpSection"><h3 class="helpTitle"><span class="material-symbols-outlined">warning</span>免責事項・注意事項</h3><div class="helpNote"><p>収録内容は原文を保持しており、運営者が内容の正確性、合法性、完全性、有用性を保証するものではありません。公開・転載・共有する際は、内容と権利関係を利用者自身で確認してください。</p></div></section>
-    <section class="helpSection"><h3 class="helpTitle"><span class="material-symbols-outlined">keyboard</span>ショートカット</h3><p><kbd>/</kbd> で検索欄、<kbd>Enter</kbd> で検索、<kbd>Esc</kbd> でダイアログを閉じられます。</p></section>
-  </div>
-</dialog>
-<div id="toast" class="toast hidden" role="status"></div>
+        // Help Modal
+        helpBtn.addEventListener('click', () => helpDialog.showModal());
+        closeHelpBtn.addEventListener('click', () => helpDialog.close());
 
-<script id="workerCode" type="text/plain">
-let texts=[],threads=[],A=[],B=[],E=[],T=[],N=[],D=[],hits=[],queryNo=0;
-const norm=(s,fold)=>fold?s.normalize('NFKC').toLowerCase():s;
-const words=s=>Array.from(s.matchAll(/"([^"]+)"|(\S+)/g),m=>m[1]||m[2]);
-function parse(s,file){
- texts.push(s);let tid=-1,prev=-1;
- const re=/^={20,}\n([^\n]+)\n(https?:\/\/[^\n]+)\n={20,}[^\n]*|^(\d{1,6}) 名前：[^\n]*/gm;let m;
- while((m=re.exec(s))){
-  if(prev>=0)E[prev]=m.index;
-  if(m[1]){if(tid>=0)threads[tid].last=A.length;tid=threads.length;threads.push({title:m[1],url:m[2].trim(),file,first:A.length,last:A.length});prev=-1;}
-  else if(tid>=0){prev=A.length;A.push(m.index);B.push(re.lastIndex+1);E.push(s.length);T.push(tid);N.push(+m[3]);let dt=m[0].match(/(?:：|\s)(\d{4})\/(\d{2})\/(\d{2})/);D.push(dt?+(dt[1]+dt[2]+dt[3]):0);}
- }
- if(tid>=0)threads[tid].last=A.length;
-}
-function rec(i){let t=threads[T[i]],s=texts[t.file],header=s.slice(A[i],B[i]-1);return {i,t:T[i],num:N[i],header,body:s.slice(B[i],E[i]).trimEnd(),date:D[i],title:t.title,url:t.url};}
-function sendPage(page,size){let p=Math.max(0,Math.min(page,Math.ceil(hits.length/size)-1));postMessage({type:'page',page:p,total:hits.length,rows:hits.slice(p*size,(p+1)*size).map(rec)});}
-async function search(q){let token=++queryNo,start=performance.now(),out=[],hist={},threadCount=new Set,terms=words(q.q).map(x=>norm(x,q.fold)),ex=words(q.exclude).map(x=>norm(x,q.fold)),book=new Set(q.bookmarks||[]);let from=+(q.from||'').replaceAll('-',''),to=+(q.to||'').replaceAll('-','');
- for(let i=0;i<A.length;i++){
-  if(i%10000===0){postMessage({type:'searchProgress',value:i/A.length});await new Promise(r=>setTimeout(r,0));if(token!==queryNo)return;}
-  if(q.favorites&&!book.has(i)||q.thread!==''&&T[i]!==+q.thread||from&&D[i]<from||to&&(!D[i]||D[i]>to))continue;
-  let th=threads[T[i]],s=texts[th.file];
-  if(q.title&&!norm(th.title,q.fold).includes(norm(q.title,q.fold)))continue;
-  if(q.id){let id=s.slice(A[i],B[i]).match(/\bID:([^\s]+)/);if(!id||id[1]!==q.id)continue;}
-  let hay=(terms.length||ex.length)?norm(s.slice(q.scope==='body'?B[i]:A[i],E[i]),q.fold):'';
-  if(terms.length){if(q.mode==='or'&&!terms.some(w=>hay.includes(w)))continue;if(q.mode==='and'&&!terms.every(w=>hay.includes(w)))continue;if(q.mode==='not'&&terms.some(w=>hay.includes(w)))continue;}
-  if(ex.some(w=>hay.includes(w)))continue;
-  out.push(i);threadCount.add(T[i]);let y=D[i]?String(D[i]).slice(0,4):'不明';hist[y]=(hist[y]||0)+1;
- }
- if(token!==queryNo)return;
- if(q.sort==='new'||q.sort==='old'){let sign=q.sort==='new'?-1:1;out.sort((a,b)=>{if(!D[a])return !D[b]?a-b:1;if(!D[b])return -1;return sign*(D[a]-D[b]||a-b);});}
- hits=out;postMessage({type:'found',total:hits.length,threads:threadCount.size,hist,ms:Math.round(performance.now()-start),q});sendPage(0,q.size);
-}
-onmessage=async({data:m})=>{try{
- if(m.type==='load'){
-  let bytes=Uint8Array.from(atob(m.b64),c=>c.charCodeAt(0));let buf=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();parse(new TextDecoder().decode(buf).replace(/\r\n?/g,'\n'),texts.length);postMessage({type:'loaded',count:A.length});
- }else if(m.type==='finish'){
-  A=Uint32Array.from(A);B=Uint32Array.from(B);E=Uint32Array.from(E);T=Uint16Array.from(T);N=Uint32Array.from(N);D=Uint32Array.from(D);
-  let min=99999999,max=0;for(let d of D)if(d){min=Math.min(min,d);max=Math.max(max,d);}
-  postMessage({type:'ready',count:A.length,threads:threads.map((t,i)=>({...t,i,count:t.last-t.first})),min,max});
- }else if(m.type==='search')await search(m.q);
- else if(m.type==='cancel'){queryNo++;postMessage({type:'cancelled'});}
- else if(m.type==='page')sendPage(m.page,m.size);
- else if(m.type==='readThread'){
-  let t=threads[m.t];if(!t)throw Error('スレッドが見つかりません。');
-  let size=Math.max(1,Math.min(200,Math.trunc(m.size)||100)),count=t.last-t.first,center=-1;
-  if(m.num!==undefined){for(let k=t.first;k<t.last;k++)if(N[k]===m.num){center=k;break;}if(center<0){postMessage({type:'notice',message:'このレス番号は収録されていません。'});return;}}
-  else if(Number.isInteger(m.i)&&m.i>=t.first&&m.i<t.last)center=m.i;
-  let pages=Math.max(1,Math.ceil(count/size));let page=center>=0?Math.floor((center-t.first)/size):Math.max(0,Math.min(pages-1,Math.trunc(m.page)||0));
-  let start=t.first+page*size,end=Math.min(t.last,start+size);
-  postMessage({type:'threadPage',request:m.request,t:m.t,title:t.title,count,page,pages,size,center,rows:Array.from({length:end-start},(_,n)=>rec(start+n))});
- }else if(m.type==='export'){
-  const safe=v=>{let s=String(v);if(/^[\s]*[=+\-@]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
-  let pieces=['\ufeffスレッド,レス番号,ヘッダー,本文,URL\r\n'];
-  for(let k=0;k<hits.length;k++){let r=rec(hits[k]);pieces.push([r.title,r.num,r.header,r.body,r.url+r.num].map(safe).join(',')+'\r\n');}
-  postMessage({type:'export',blob:new Blob(pieces,{type:'text/csv;charset=utf-8'}),count:hits.length});
- }
- }catch(e){postMessage({type:'error',message:e.message});}};
+        // Tab Switching Function
+        function switchTab(activeNav, activeTab) {
+            [navHomeTab, navCommentsTab, navSettingsTab].forEach(nav => nav.classList.remove('active'));
+            [tabHome, tabComments, tabSettings].forEach(tab => tab.classList.remove('active'));
 
-</script>
-<script>
-'use strict';
+            activeNav.classList.add('active');
+            activeTab.classList.add('active');
+        }
 
-const $=id=>document.getElementById(id),fmt=n=>n.toLocaleString('ja-JP');
-let worker,ready=false,tab='search',allThreads=[],page=0,total=0,busy=false,lastQ=null,rowsMap=new Map,loadIndex=0,pendingRun=false;
-const KEY='cookie-archive-v1';
-function getStore(k,f){try{return JSON.parse(localStorage.getItem(KEY+k))??f}catch{return f}}
-let favorites=new Set(getStore('favorites',[]).filter(Number.isInteger)),history=getStore('history',[]);if(!Array.isArray(history))history=[];
-function save(k,v){try{localStorage.setItem(KEY+k,JSON.stringify(v))}catch{toast('ブラウザへの保存ができません。バックアップを利用してください。')}}
-function toast(s){$('toast').textContent=s;$('toast').classList.remove('hidden');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.add('hidden'),4000)}
-function setTheme(d){document.body.classList.toggle('dark',d);const t=$('theme').querySelector?.('span:last-child');if(t)t.textContent=d?'ライト':'ダーク';else $('theme').textContent=d?'ライト':'ダーク';save('dark',d)}setTheme(getStore('dark',false));$('theme').onclick=()=>setTheme(!document.body.classList.contains('dark'));
-function download(blob,name){let u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),30000)}
-function favCount(){$('favCount').textContent=fmt(favorites.size)}favCount();
-function showHistory(){$('history').replaceChildren();history.slice(0,8).forEach(s=>{let b=document.createElement('button');b.type='button';b.textContent=s;b.onclick=()=>{$('q').value=s;run()};$('history').append(b)})}showHistory();
-const words=s=>Array.from(s.matchAll(/"([^"]+)"|(\S+)/g),m=>m[1]||m[2]);
-function highlight(node,text){let q=lastQ,terms=q?words(q.q):[];if(!q?.highlight||!terms.length){node.append(document.createTextNode(text));return}
- let normalized='',map=[];for(let i=0;i<text.length;){let c=String.fromCodePoint(text.codePointAt(i)),n=q.fold?c.normalize('NFKC').toLowerCase():c;normalized+=n;for(let j=0;j<n.length;j++)map.push([i,i+c.length]);i+=c.length;}
- let spans=[];for(let term of terms){term=q.fold?term.normalize('NFKC').toLowerCase():term;if(!term)continue;let p=0;while((p=normalized.indexOf(term,p))>=0){spans.push([map[p][0],map[p+term.length-1][1]]);p+=term.length;}}
- spans.sort((a,b)=>a[0]-b[0]);let merged=[];for(let s of spans){let last=merged.at(-1);if(last&&s[0]<=last[1])last[1]=Math.max(last[1],s[1]);else merged.push(s)}let p=0;for(let [a,b] of merged){node.append(document.createTextNode(text.slice(p,a)));let m=document.createElement('mark');m.textContent=text.slice(a,b);node.append(m);p=b}node.append(document.createTextNode(text.slice(p)));
-}
-function bodyContent(node,text,r){
- const re=/(?:https?:\/\/|ttps?:\/\/|www\.)[^\s<>"'\u3000]+|>>([0-9]{1,6})/gi;let m,p=0;
- while((m=re.exec(text))){
-  highlight(node,text.slice(p,m.index));
-  if(m[1]){const num=+m[1];let b=document.createElement('button');b.className='linkbutton';b.textContent=m[0];b.onclick=()=>openReader(r.t,r.i,num);node.append(b);}
-  else{
-   let label=m[0].replace(/[。、，．！？）」』】〉》]+$/u,'');
-   while(label.endsWith(')')&&(label.match(/\)/g)||[]).length>(label.match(/\(/g)||[]).length)label=label.slice(0,-1);
-   let href=/^www\./i.test(label)?'https://'+label:/^ttps?:/i.test(label)?'h'+label:label;
-   try{let url=new URL(href);if(!['http:','https:'].includes(url.protocol)||!url.hostname)throw Error('URL');let link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';highlight(link,label);node.append(link);highlight(node,m[0].slice(label.length));}
-   catch{highlight(node,m[0]);}
-  }
-  p=re.lastIndex;
- }
- highlight(node,text.slice(p));
-}
-function action(text,fn){let b=document.createElement('button');b.type='button';b.textContent=text;b.onclick=fn;return b}
-function card(r,center){rowsMap.set(r.i,r);let a=document.createElement('article');a.className='result'+(r.i===center?' selected':'');a.id='post-'+r.i;
- let title=document.createElement('button');title.className='linkbutton threadtitle';title.textContent=r.title;title.onclick=()=>openReader(r.t,r.i);a.append(title);
- let meta=document.createElement('div');meta.className='meta';highlight(meta,r.header);let id=r.header.match(/\bID:([^\s]+)/);if(id){let b=action('このIDを検索',()=>{$('idFilter').value=id[1];switchTab('search');run();$('reader').close()});b.className='linkbutton';meta.append('　',b)}a.append(meta);
- let body=document.createElement('div');body.className='body';let preview=r.body;if(preview.length>6000){let pos=0;if(lastQ?.q){let hay=lastQ.fold?preview.normalize('NFKC').toLowerCase():preview;let indices=words(lastQ.q).map(w=>hay.indexOf(lastQ.fold?w.normalize('NFKC').toLowerCase():w)).filter(i=>i>=0);if(indices.length)pos=Math.max(0,Math.min(...indices)-300);}preview=(pos?'…\n':'')+preview.slice(pos,pos+6000)+'\n…（本文を展開すると全文を表示）';}bodyContent(body,preview,r);a.append(body);let footer=document.createElement('footer');
- let fav=action(favorites.has(r.i)?'★ 保存済み':'☆ 保存',()=>{favorites.has(r.i)?favorites.delete(r.i):favorites.add(r.i);save('favorites',[...favorites]);favCount();document.querySelectorAll('[data-fav="'+r.i+'"]').forEach(b=>{b.textContent=favorites.has(r.i)?'★ 保存済み':'☆ 保存';b.setAttribute('aria-pressed',favorites.has(r.i))});if(tab==='favorites')run()});fav.dataset.fav=r.i;fav.setAttribute('aria-pressed',favorites.has(r.i));
- let expand=action('本文を展開',()=>{body.classList.toggle('expanded');body.replaceChildren();bodyContent(body,body.classList.contains('expanded')?r.body:preview,r);expand.textContent=body.classList.contains('expanded')?'本文を折りたたむ':'本文を展開'});
- footer.append(fav,action('スレッドの全投稿を読む',()=>openReader(r.t,r.i)),expand,action('コピー',async()=>{let text=r.title+'\n'+r.header+'\n'+r.body+'\n'+r.url+r.num;try{await navigator.clipboard.writeText(text);toast('投稿をコピーしました')}catch{let t=document.createElement('textarea');t.value=text;document.body.append(t);t.select();let ok=document.execCommand('copy');t.remove();toast(ok?'投稿をコピーしました':'コピーできませんでした。本文を選択してコピーしてください。')}}));
- a.append(footer);return a;
-}
-function currentQuery(){return {q:$('q').value.trim(),mode:document.querySelector('[name=mode]:checked').value,fold:$('fold').checked,highlight:$('highlight').checked,exclude:$('exclude').value,thread:$('thread').value,title:$('titleFilter').value,id:$('idFilter').value.trim().replace(/^ID:/,''),from:$('from').value,to:$('to').value,scope:$('scope').value,sort:$('sort').value,size:+$('size').value,favorites:tab==='favorites',bookmarks:[...favorites]}}
-function setBusy(b){busy=b;$('search').disabled=b||!ready;$('cancel').classList.toggle('hidden',!b);$('export').disabled=b||!total||tab==='threads';$('prev').disabled=b||page===0;$('next').disabled=b||page+1>=Math.ceil(total/(+$('size').value));$('page').disabled=b;$('progress').classList.toggle('hidden',!b)}
-function run(){if(!ready)return;if(tab==='threads'){renderThreads();return}let q=currentQuery();if(q.from&&q.to&&q.from>q.to){toast('開始日は終了日以前にしてください。');return}if(q.q){history=[q.q,...history.filter(s=>s!==q.q)].slice(0,8);save('history',history);showHistory()}setBusy(true);$('status').textContent='全投稿を検索中…';$('progress').firstElementChild.style.width='0%';worker.postMessage({type:'search',q})}
-function switchTab(t){tab=t;document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===t);b.setAttribute('aria-pressed',b.dataset.tab===t)});$('timeline').classList.toggle('hidden',t==='threads');$('export').disabled=t==='threads'||!total||busy;}
-function renderThreads(){if(!ready)return;let q=$('q').value.trim().normalize('NFKC').toLowerCase(),list=allThreads.filter(t=>t.title.normalize('NFKC').toLowerCase().includes(q));$('results').replaceChildren();$('resultCount').textContent=fmt(list.length)+' スレッド';$('timing').textContent='';$('status').textContent='スレッド名を検索できます。選択すると投稿を表示します。';$('pager').classList.add('hidden');$('timeline').classList.add('hidden');$('export').disabled=true;for(let t of list){let div=document.createElement('div');div.className='threadrow';let b=action(t.title,()=>openReader(t.i));b.className='linkbutton';let c=document.createElement('span');c.className='small';c.textContent=fmt(t.count)+' 投稿';div.append(b,c);$('results').append(div)}if(!list.length)$('results').textContent='該当するスレッドがありません。'}
-/* Three-position pointer/touch search-mode slider */
-(function(){
-  const slider=$('modeSlider');
-  if(!slider)return;
-  const modes=['and','or','not'];
-  const labels={and:'AND検索',or:'OR検索',not:'NOT検索'};
-  let dragging=false;
-  function setMode(mode,doRun=true){
-    const idx=Math.max(0,modes.indexOf(mode)); mode=modes[idx];
-    slider.dataset.mode=mode;slider.setAttribute('aria-valuenow',idx);slider.setAttribute('aria-valuetext',labels[mode]);
-    slider.querySelector('#modeLive').textContent=labels[mode];
-    document.querySelectorAll('input[name="mode"]').forEach(r=>r.checked=r.value===mode);
-    if(doRun&&ready&&!busy)run();
-  }
-  function modeFromX(clientX){
-    const r=slider.getBoundingClientRect();
-    const x=Math.max(0,Math.min(r.width,clientX-r.left));
-    return modes[Math.min(2,Math.round(x/r.width*2))];
-  }
-  slider.addEventListener('pointerdown',e=>{dragging=true;slider.setPointerCapture?.(e.pointerId);setMode(modeFromX(e.clientX),false);e.preventDefault()});
-  slider.addEventListener('pointermove',e=>{if(dragging)setMode(modeFromX(e.clientX),false)});
-  slider.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;setMode(modeFromX(e.clientX),true)});
-  slider.addEventListener('pointercancel',()=>dragging=false);
-  slider.addEventListener('keydown',e=>{
-    const cur=modes.indexOf(slider.dataset.mode),next=e.key==='ArrowRight'||e.key==='ArrowDown'?Math.min(2,cur+1):e.key==='ArrowLeft'||e.key==='ArrowUp'?Math.max(0,cur-1):e.key==='Home'?0:e.key==='End'?2:null;
-    if(next!==null){e.preventDefault();setMode(modes[next],true)}
-  });
-})();
-$('searchForm').onsubmit=e=>{e.preventDefault();run()};$('cancel').onclick=()=>worker.postMessage({type:'cancel'});
-document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{switchTab(b.dataset.tab);if(busy){pendingRun=true;worker.postMessage({type:'cancel'});}else run()});
-$('reset').onclick=()=>{for(let id of ['thread','titleFilter','idFilter','from','to','exclude'])$(id).value='';$('scope').value='body';run()};$('sort').onchange=run;$('size').onchange=()=>{if(ready&&!busy&&tab!=='threads')worker.postMessage({type:'page',page:0,size:+$('size').value})};
-function go(p){if(!ready||busy)return;worker.postMessage({type:'page',page:p,size:+$('size').value});window.scrollTo({top:0,behavior:'smooth'})}$('prev').onclick=()=>go(page-1);$('next').onclick=()=>go(page+1);$('page').onchange=()=>go((+$('page').value||1)-1);
-$('export').onclick=()=>{$('export').disabled=true;$('status').textContent='検索結果全件のCSVを作成中…';worker.postMessage({type:'export'})};
-$('help').onclick=()=>$('helpDialog').showModal();document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());document.addEventListener('keydown',e=>{if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)&&!document.querySelector('dialog[open]')){e.preventDefault();$('q').focus()}});
-$('backup').onclick=()=>download(new Blob([JSON.stringify({version:1,dataset:'cookie-sougou-8-v1',favorites:[...favorites]},null,2)],{type:'application/json'}),'cookie-bookmarks.json');$('restore').onclick=()=>$('backupFile').click();$('backupFile').onchange=async e=>{try{let d=JSON.parse(await e.target.files[0].text());if(d.dataset!=='cookie-sougou-8-v1'||!Array.isArray(d.favorites)||!d.favorites.every(x=>Number.isInteger(x)&&x>=0&&x<742532))throw Error('このデータ用のバックアップではありません。');favorites=new Set([...favorites,...d.favorites]);save('favorites',[...favorites]);favCount();run();toast('お気に入りを読み込みました')}catch(err){toast(err.message)}e.target.value=''};
+        navHomeTab.addEventListener('click', () => switchTab(navHomeTab, tabHome));
+        navCommentsTab.addEventListener('click', () => {
+            switchTab(navCommentsTab, tabComments);
+            renderComments();
+        });
+        navSettingsTab.addEventListener('click', () => switchTab(navSettingsTab, tabSettings));
 
+        // Mode Slider (AND / OR)
+        modeSlider.addEventListener('click', () => {
+            if (searchMode === 'and') {
+                searchMode = 'or';
+                modeSlider.setAttribute('data-mode', 'or');
+                optAnd.classList.remove('active');
+                optOr.classList.add('active');
+            } else {
+                searchMode = 'and';
+                modeSlider.setAttribute('data-mode', 'and');
+                optOr.classList.remove('active');
+                optAnd.classList.add('active');
+            }
+            performSearch();
+        });
 
-/* Drawer menu */
-(function(){
-  const menu=$('menuButton'),drawer=document.querySelector('.side'),backdrop=$('drawerBackdrop'),close=$('drawerClose');
-  function openMenu(){drawer.classList.add('open');backdrop.classList.add('open');menu.setAttribute('aria-expanded','true');document.body.style.overflow='hidden';}
-  function closeMenu(){drawer.classList.remove('open');backdrop.classList.remove('open');menu.setAttribute('aria-expanded','false');document.body.style.overflow='';}
-  menu?.addEventListener('click',openMenu);close?.addEventListener('click',closeMenu);backdrop?.addEventListener('click',closeMenu);
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drawer?.classList.contains('open'))closeMenu()});
-  document.querySelectorAll('.side button,.side input,.side select').forEach(el=>el.addEventListener('change',()=>{}));
-})();
-/* Language setting: preserve the archive data while localizing the primary shell labels. */
-(function(){
- const dict={
-  ja:{title:'クッキー☆<br>元スレ検索室',search:'探したい言葉を入力',placeholder:'ここに検索内容を入力…',and:'すべて含む',or:'いずれか含む',not:'含まない',hint:'スライドして AND・OR・NOT を切り替え',dark:'ダーク',light:'ライト',help:'使い方',language:'言語'},
-  en:{title:'COOKIE☆<br>THREAD SEARCH',search:'Search for a word',placeholder:'Enter search terms here…',and:'Include all',or:'Include any',not:'Exclude',hint:'Slide to switch AND · OR · NOT',dark:'Dark',light:'Light',help:'How to use',language:'Language'},
-  ru:{title:'COOKIE☆<br>ПОИСК ТРЕДОВ',search:'Введите слово для поиска',placeholder:'Введите запрос здесь…',and:'Все слова',or:'Любое слово',not:'Не содержит',hint:'Сдвигайте для AND · OR · NOT',dark:'Тёмная',light:'Светлая',help:'Как пользоваться',language:'Язык'},
-  'zh-CN':{title:'COOKIE☆<br>主题搜索',search:'输入要搜索的词',placeholder:'在这里输入搜索内容…',and:'全部包含',or:'任一包含',not:'不包含',hint:'滑动切换 AND · OR · NOT',dark:'深色',light:'浅色',help:'使用方法',language:'语言'},
-  'zh-TW':{title:'COOKIE☆<br>主題搜尋',search:'輸入要搜尋的詞',placeholder:'在這裡輸入搜尋內容…',and:'全部包含',or:'任一包含',not:'不包含',hint:'滑動切換 AND · OR · NOT',dark:'深色',light:'淺色',help:'使用方法',language:'語言'},
-  ko:{title:'COOKIE☆<br>스레드 검색',search:'검색할 단어 입력',placeholder:'여기에 검색 내용을 입력…',and:'모두 포함',or:'하나라도 포함',not:'포함하지 않음',hint:'밀어서 AND · OR · NOT 전환',dark:'다크',light:'라이트',help:'사용 방법',language:'언어'}
- };
- function applyLang(code){
-  const d=dict[code]||dict.ja;document.documentElement.lang=code;
-  document.querySelector('.brand h1').innerHTML=d.title;
-  $('searchForm').querySelector('label[for="q"]').textContent=d.search;$('q').placeholder=d.placeholder;
-  document.querySelector('.modeLabel.and').textContent=d.and;document.querySelector('.modeLabel.or').textContent=d.or;document.querySelector('.modeLabel.not').textContent=d.not;
-  $('searchForm').style.setProperty('--mode-hint',JSON.stringify(d.hint));
-  document.querySelector('#searchForm').setAttribute('data-mode-hint',d.hint);
-  const themeText=$('theme').querySelector('span:last-child');if(themeText)themeText.textContent=document.body.classList.contains('dark')?d.light:d.dark;
-  const helpText=$('help').querySelector('span:last-child');if(helpText)helpText.textContent=d.help;
-  const langText=$('languageOpen')?.querySelector('span:last-child');if(langText)langText.textContent=d.language;
-  document.querySelectorAll('.languageButton').forEach(b=>b.classList.toggle('active',b.dataset.lang===code));
-  try{localStorage.setItem('cookie-archive-language',code)}catch{}
- }
- document.querySelectorAll('.languageButton').forEach(b=>b.addEventListener('click',()=>applyLang(b.dataset.lang)));
- $('languageOpen')?.addEventListener('click',()=>{drawerOpenForLanguage()});
- function drawerOpenForLanguage(){const drawer=document.querySelector('.side'),backdrop=$('drawerBackdrop');drawer.classList.add('open');backdrop.classList.add('open');$('menuButton').setAttribute('aria-expanded','true');document.body.style.overflow='hidden';document.querySelector('.langPanel')?.scrollIntoView({behavior:'smooth',block:'center'});}
- try{applyLang(localStorage.getItem('cookie-archive-language')||'ja')}catch{applyLang('ja')}
-})();
+        // ===== コメント機能ロジック =====
+        function renderComments() {
+            commentsList.innerHTML = '';
 
-let readerState={t:null,page:0,pages:1},readerRequest=0;
-function openReader(t,i,num){if(!ready)return;let fresh=!$('reader').open||readerState.t!==t;readerState.t=t;if(!$('reader').open)$('reader').showModal();$('readerTitle').textContent=allThreads[t]?.title||'スレッドの全投稿';if(fresh){$('readerInfo').textContent='投稿を読み込んでいます…';$('readerRows').replaceChildren();}worker.postMessage({type:'readThread',request:++readerRequest,t,i,num,page:0,size:+$('readerSize').value});}
-function readerGo(page){if(readerState.t===null)return;worker.postMessage({type:'readThread',request:++readerRequest,t:readerState.t,page,size:+$('readerSize').value});}
-function renderReader(m){if(m.request!==readerRequest||!$('reader').open)return;readerState={t:m.t,page:m.page,pages:m.pages};$('readerTitle').textContent=m.title;$('readerInfo').textContent='収録 '+fmt(m.count)+' 投稿・'+(m.rows.length?fmt(m.page*m.size+1)+'–'+fmt(m.page*m.size+m.rows.length)+' 件目':'0 件')+'を表示（検索条件による絞り込みなし）';$('readerPage').value=m.page+1;$('readerPage').max=m.pages;$('readerPages').textContent=fmt(m.pages);for(let id of ['readerFirst','readerPrev','readerPrevBottom'])$(id).disabled=m.page===0;for(let id of ['readerLast','readerNext','readerNextBottom'])$(id).disabled=m.page+1>=m.pages;$('readerRows').replaceChildren(...m.rows.map(r=>card(r,m.center)));if(!m.rows.length)$('readerRows').textContent='このスレッドには投稿が収録されていません。';$('reader').scrollTop=0;requestAnimationFrame(()=>{let target=$('readerRows').querySelector('.selected');if(target)target.scrollIntoView({block:'center'})});}
-$('readerFirst').onclick=()=>readerGo(0);$('readerLast').onclick=()=>readerGo(readerState.pages-1);
-for(let id of ['readerPrev','readerPrevBottom'])$(id).onclick=()=>readerGo(readerState.page-1);
-for(let id of ['readerNext','readerNextBottom'])$(id).onclick=()=>readerGo(readerState.page+1);
-$('readerPage').onchange=()=>readerGo((+$('readerPage').value||1)-1);
-$('readerSize').onchange=()=>readerGo(0);
-$('readerJumpForm').onsubmit=e=>{e.preventDefault();let num=+$('readerNumber').value;if(Number.isInteger(num)&&num>0)openReader(readerState.t,undefined,num);};
-$('reader').addEventListener('close',()=>{readerRequest++;$('readerRows').replaceChildren();});
+            const parentComments = commentsData.filter(c => c.parentId === null);
 
-const packs=()=>document.querySelectorAll('script[data-pack]');
-window.__COOKIE_DATA_PACKS=window.__COOKIE_DATA_PACKS||[];
-function loadNext(){
- let p=packs()[0];
- if(p){
-  const index=Number(p.dataset.pack)-1;
-  const b64=window.__COOKIE_DATA_PACKS[index];
-  if(typeof b64!=='string'){setBusy(false);$('status').textContent='データパック '+(index+1)+' を読み込めませんでした。data-'+(index+1)+'.js が同じフォルダーにあるか確認してください。';return;}
-  worker.postMessage({type:'load',b64});
-  p.remove();
- }else worker.postMessage({type:'finish'});
-}
-function start(){try{if(typeof DecompressionStream==='undefined')throw Error('圧縮データの展開に対応した新しいChromeまたはEdgeで開いてください。');let url=URL.createObjectURL(new Blob([$('workerCode').textContent],{type:'text/javascript'}));worker=new Worker(url);URL.revokeObjectURL(url);worker.onerror=e=>{setBusy(false);$('status').textContent='処理を開始できませんでした。HTMLをダウンロードし、ChromeまたはEdgeで直接開いてください。';};worker.onmessage=({data:m})=>{
- if(m.type==='loaded'){loadIndex++;$('status').textContent=loadIndex+' / 8 ファイルを展開・整理しました（'+fmt(m.count)+' 投稿）';$('progress').firstElementChild.style.width=(loadIndex/8*100)+'%';loadNext();}
- if(m.type==='ready'){ready=true;allThreads=m.threads;$('postCount').textContent=fmt(m.count);$('threadCount').textContent=fmt(m.threads.length);const d=n=>String(n).replace(/(\d{4})(\d{2})(\d{2})/,'$1/$2/$3');$('period').textContent=d(m.min)+' – '+d(m.max);let f=document.createDocumentFragment();for(let t of allThreads){let o=document.createElement('option');o.value=t.i;o.textContent=t.title+'（'+fmt(t.count)+'）';f.append(o)}$('thread').append(f);$('search').disabled=false;run();}
- if(m.type==='searchProgress')$('progress').firstElementChild.style.width=m.value*100+'%';
- if(m.type==='found'){lastQ=m.q;total=m.total;setBusy(false);$('resultCount').textContent=fmt(m.total)+' 件';$('timing').textContent=' / '+fmt(m.threads)+' スレッド・'+(m.ms/1000).toFixed(2)+'秒';$('status').textContent=m.q.favorites?'お気に入りの中から検索しました。':'全収録投稿を検索しました。';$('bars').replaceChildren();let entries=Object.entries(m.hist).filter(([y])=>y!=='不明').sort(),max=Math.max(1,...entries.map(x=>x[1]));for(let [y,n]of entries){let b=document.createElement('button');b.className='bar';b.style.height=Math.max(4,n/max*70)+'px';b.title=y+'年：'+fmt(n)+'件';b.setAttribute('aria-label',b.title);b.onclick=()=>{$('from').value=y+'-01-01';$('to').value=y+'-12-31';run()};$('bars').append(b)}$('barlabels').replaceChildren();for(let y of [entries[0]?.[0]||'',entries.at(-1)?.[0]||'']){let s=document.createElement('span');s.textContent=y;$('barlabels').append(s)}$('timeline').classList.toggle('hidden',!entries.length||tab==='threads');}
- if(m.type==='page'&&tab!=='threads'){page=m.page;total=m.total;rowsMap.clear();$('results').replaceChildren(...m.rows.map(r=>card(r)));if(!m.rows.length){let d=document.createElement('div');d.className='empty';d.textContent=tab==='favorites'?'お気に入りがないか、検索条件に一致しません。投稿の「☆ 保存」で追加できます。':'一致する投稿がありません。語句や絞り込み条件を変更してください。';$('results').append(d)}$('pager').classList.toggle('hidden',!total);$('page').value=page+1;$('pages').textContent=fmt(Math.max(1,Math.ceil(total/(+$('size').value))));$('page').max=Math.max(1,Math.ceil(total/(+$('size').value)));setBusy(false);}
- if(m.type==='threadPage')renderReader(m);
- if(m.type==='export'){download(m.blob,'cookie-search-'+new Date().toISOString().slice(0,10)+'.csv');$('status').textContent=fmt(m.count)+' 件をCSVに出力しました。';$('export').disabled=!total||tab==='threads';}
- if(m.type==='cancelled'){setBusy(false);if(pendingRun){pendingRun=false;run()}else $('status').textContent='検索を中止しました。前の結果を表示しています。';}
- if(m.type==='notice')toast(m.message);
- if(m.type==='error'){setBusy(false);$('status').textContent='エラー：'+m.message;}
- };loadNext();}catch(e){$('status').textContent=e.message;$('results').textContent='HTMLファイルをパソコンにダウンロードして開いてください。'}}
+            if (parentComments.length === 0) {
+                commentsList.innerHTML = '<div style="text-align:center; color:var(--muted-color); padding:30px 0;">まだコメントはありません</div>';
+                return;
+            }
 
-/* Rounded Soft-Minimalism: three-position search-mode slider */
-(function(){
-  const slider=$('modeSlider');
-  if(!slider)return;
-  const radios=[...document.querySelectorAll('input[name="mode"]')];
-  const modes=['and','or','not'];
-  let index=0,dragging=false,startX=0,startIndex=0;
+            parentComments.forEach(comment => {
+                const commentEl = createCommentCard(comment, false);
+                commentsList.appendChild(commentEl);
 
-  function setMode(next,announce=true){
-    index=Math.max(0,Math.min(2,Math.round(next)));
-    const mode=modes[index];
-    slider.dataset.mode=mode;
-    slider.setAttribute('aria-valuenow',index);
-    slider.setAttribute('aria-valuetext',mode==='and'?'AND検索':mode==='or'?'OR検索':'NOT検索');
-    radios.forEach(r=>r.checked=r.value===mode);
-    const live=$('modeLive');if(live)live.textContent=mode==='and'?'AND検索':mode==='or'?'OR検索':'NOT検索';
-    if(announce) slider.dataset.changed='1';
-  }
-  function indexFromX(x){
-    const r=slider.getBoundingClientRect();
-    return Math.max(0,Math.min(2,Math.round(((x-r.left)/r.width)*2)));
-  }
-  slider.addEventListener('pointerdown',e=>{
-    dragging=true;startX=e.clientX;startIndex=index;
-    slider.setPointerCapture?.(e.pointerId);
-  });
-  slider.addEventListener('pointermove',e=>{
-    if(!dragging)return;
-    const dx=e.clientX-startX;
-    const step=slider.getBoundingClientRect().width/2;
-    if(Math.abs(dx)>step*.18){
-      setMode(startIndex+(dx>0?1:-1));
-      startIndex=index;startX=e.clientX;
-    }
-  });
-  slider.addEventListener('pointerup',e=>{
-    if(!dragging)return;dragging=false;
-    setMode(indexFromX(e.clientX));
-  });
-  slider.addEventListener('pointercancel',()=>dragging=false);
-  slider.addEventListener('click',e=>setMode(indexFromX(e.clientX)));
-  slider.addEventListener('keydown',e=>{
-    if(e.key==='ArrowLeft'){e.preventDefault();setMode(index-1)}
-    if(e.key==='ArrowRight'){e.preventDefault();setMode(index+1)}
-    if(e.key==='Home'){e.preventDefault();setMode(0)}
-    if(e.key==='End'){e.preventDefault();setMode(2)}
-  });
-  radios.forEach(r=>r.addEventListener('change',()=>setMode(modes.indexOf(r.value))));
-  setMode(0,false);
-})();
+                const childComments = commentsData.filter(c => c.parentId === comment.id);
+                childComments.forEach(child => {
+                    const childEl = createCommentCard(child, true);
+                    commentsList.appendChild(childEl);
+                });
+            });
+        }
 
-window.addEventListener('DOMContentLoaded',start);
-</script>
-<script>
-/* ===== 新レイアウト：3ボトムナビ + ローカルコメント欄 ===== */
-(function(){
-  const $id=id=>document.getElementById(id);
-  const home=$id('homeView'),comments=$id('commentsView'),other=$id('otherView');
-  const navHome=$id('navHome'),navComments=$id('navComments'),navOther=$id('navOther');
-  const legacySearch=document.querySelector('.legacy-tabs [data-tab="search"]');
-  const legacyThreads=document.querySelector('.legacy-tabs [data-tab="threads"]');
-  const legacyFavorites=document.querySelector('.legacy-tabs [data-tab="favorites"]');
+        function createCommentCard(comment, isReply) {
+            const card = document.createElement('div');
+            card.className = `comment-card ${isReply ? 'reply-card' : ''}`;
 
-  function setView(view){
-    home.classList.toggle('hidden',view!=='home');
-    comments.classList.toggle('active',view==='comments');
-    other.classList.toggle('active',view==='other');
-    navHome.classList.toggle('active',view==='home');
-    navComments.classList.toggle('active',view==='comments');
-    navOther.classList.toggle('active',view==='other');
-    if(view==='comments') renderComments();
-  }
-  navHome.onclick=()=>{setView('home');legacySearch?.click()};
-  navComments.onclick=()=>setView('comments');
-  navOther.onclick=()=>setView('other');
+            let formattedText = escapeHtml(comment.text);
+            formattedText = formattedText.replace(/(@[^\s　]+)/g, '<span class="mention-tag">$1</span>');
+            formattedText = formattedText.replace(/(>>\d+)/g, '<span class="mention-tag">$1</span>');
 
-  $id('floatingSearch').onclick=()=>{
-    setView('home');
-    legacySearch?.click();
-    $id('q')?.focus();
-  };
-  $id('openFavoritesBtn').onclick=()=>{
-    legacyFavorites?.click();setView('home');
-    $id('contentTitle').textContent='お気に入り';
-  };
-  $id('openThreadsBtn').onclick=()=>{
-    legacyThreads?.click();setView('home');
-    $id('contentTitle').textContent='スレッド一覧';
-  };
-  $id('returnSearchBtn').onclick=()=>{
-    setView('home');legacySearch?.click();$id('contentTitle').textContent='検索結果';
-  };
-  $id('sortMirror').onchange=e=>{
-    $id('sort').value=e.target.value;
-    $id('sort').dispatchEvent(new Event('change'));
-  };
-  $id('sort').addEventListener('change',()=>{$id('sortMirror').value=$id('sort').value});
+            card.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-author">${escapeHtml(comment.author)}</span>
+                    <span>${comment.time}</span>
+                </div>
+                <div class="comment-text">${formattedText}</div>
+                <div class="comment-actions">
+                    <button class="action-btn like-btn" onclick="handleLike(${comment.id})">
+                        <span class="material-symbols-outlined">thumb_up</span>
+                        <span>${comment.likes}</span>
+                    </button>
+                    <button class="action-btn dislike-btn" onclick="handleDislike(${comment.id})">
+                        <span class="material-symbols-outlined">thumb_down</span>
+                        <span>${comment.dislikes}</span>
+                    </button>
+                    <button class="action-btn" onclick="setReplyTarget(${comment.id}, '${escapeHtml(comment.author)}')">
+                        <span class="material-symbols-outlined">reply</span>
+                        <span>返信</span>
+                    </button>
+                </div>
+            `;
+            return card;
+        }
 
-  /* メトリクスを右ペインへ同期 */
-  function syncMetrics(){
-    const pairs=[['resultCount','rightResultCount'],['threadCount','rightThreadCount'],['searchTime','rightSearchTime']];
-    for(const [a,b] of pairs){
-      const x=$id(a),y=$id(b);
-      if(x&&y)y.textContent=x.textContent;
-    }
-    const t=$id('threadCount'),s=$id('threadCountSide');
-    if(t&&s)s.textContent=t.textContent;
-    const p=$id('postCount'),d=$id('dbRes');
-    if(p&&d)d.textContent=p.textContent;
-    const tc=$id('threadCount'),dt=$id('dbThreads');
-    if(tc&&dt)dt.textContent=tc.textContent;
-    const period=$id('period'),note=$id('dbStatusNote');
-    if(period&&note)note.textContent=period.textContent;
-  }
-  for(const id of ['resultCount','threadCount','searchTime','postCount','period']){
-    const node=$id(id);
-    if(node)new MutationObserver(syncMetrics).observe(node,{subtree:true,childList:true,characterData:true});
-  }
-  syncMetrics();
+        window.handleLike = function(id) {
+            const comment = commentsData.find(c => c.id === id);
+            if (comment) {
+                comment.likes++;
+                renderComments();
+            }
+        };
 
-  /* ===== コメントデータ：このブラウザ内だけに保存 ===== */
-  const COMMENT_KEY='cookie-archive-comments-v1';
-  const seed=[
-    {id:1,parentId:null,author:'語録研究者',text:'本スレの過去ログ検索が快適で助かります！',time:'2026/09/18 10:15',likes:5,dislikes:0,liked:false,disliked:false},
-    {id:2,parentId:1,author:'名無しさん',text:'@語録研究者 本当に便利ですね。検索の挙動もスムーズです。',time:'2026/09/18 11:02',likes:2,dislikes:0,liked:false,disliked:false}
-  ];
-  let commentsData;
-  try{
-    const saved=JSON.parse(localStorage.getItem(COMMENT_KEY)||'null');
-    commentsData=Array.isArray(saved)?saved:seed;
-  }catch{commentsData=seed}
-  let replyTarget=null;
+        window.handleDislike = function(id) {
+            const comment = commentsData.find(c => c.id === id);
+            if (comment) {
+                comment.dislikes++;
+                renderComments();
+            }
+        };
 
-  function saveComments(){
-    try{localStorage.setItem(COMMENT_KEY,JSON.stringify(commentsData))}
-    catch{toast('コメントを保存できませんでした。')}
-  }
-  function nowString(){
-    const d=new Date();
-    return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  }
-  function insertMention(author){
-    const ta=$id('commentTextInput');if(!ta)return;
-    const token=`@${author} `;
-    if(!ta.value.includes(token))ta.value=token+ta.value;
-    ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);
-  }
-  window.handleLike=id=>{
-    const c=commentsData.find(x=>x.id===id);if(!c)return;
-    if(c.liked){c.liked=false;c.likes=Math.max(0,c.likes-1)}
-    else{c.liked=true;c.likes++;if(c.disliked){c.disliked=false;c.dislikes=Math.max(0,c.dislikes-1)}}
-    saveComments();renderComments();
-  };
-  window.handleDislike=id=>{
-    const c=commentsData.find(x=>x.id===id);if(!c)return;
-    if(c.disliked){c.disliked=false;c.dislikes=Math.max(0,c.dislikes-1)}
-    else{c.disliked=true;c.dislikes++;if(c.liked){c.liked=false;c.likes=Math.max(0,c.likes-1)}}
-    saveComments();renderComments();
-  };
-  window.handleMention=id=>{
-    const c=commentsData.find(x=>x.id===id);if(c)insertMention(c.author);
-  };
-  window.setReplyTarget=id=>{
-    const target=commentsData.find(x=>x.id===id);if(!target)return;
-    replyTarget={id:target.parentId||target.id,author:target.author};
-    $id('replyTargetText').textContent=`@${target.author} へ返信中`;
-    $id('replyTargetBar').classList.remove('hidden');
-    insertMention(target.author);
-  };
-  function renderComments(){
-    const list=$id('commentsList');if(!list)return;
-    list.replaceChildren();
-    const parents=commentsData.filter(c=>c.parentId===null);
-    if(!parents.length){list.innerHTML='<div class="empty">まだコメントはありません。</div>';return}
-    for(const c of parents){
-      list.append(createComment(c,false));
-      for(const r of commentsData.filter(x=>x.parentId===c.id))list.append(createComment(r,true));
-    }
-  }
-  function createComment(c,isReply){
-    const card=document.createElement('article');
-    card.className='commentCard'+(isReply?' reply':'');
-    const head=document.createElement('div');head.className='commentHeader';
-    const author=document.createElement('span');author.className='commentAuthor';author.textContent=c.author;
-    const time=document.createElement('span');time.textContent=c.time;head.append(author,time);
-    const text=document.createElement('div');text.className='commentText';
-    text.innerHTML=escapeHtml(c.text)
-      .replace(/(@[^\s　]+)/g,'<span class="mentionTag">$1</span>')
-      .replace(/(&gt;&gt;[0-9]{1,6})/g,'<span class="mentionTag">$1</span>');
-    const actions=document.createElement('div');actions.className='commentActions';
-    const like=document.createElement('button');
-    like.className='commentAction like'+(c.liked?' active':'');
-    like.innerHTML='<span class="material-symbols-outlined">thumb_up</span><span>'+c.likes+'</span>';
-    like.onclick=()=>handleLike(c.id);
-    const dislike=document.createElement('button');
-    dislike.className='commentAction dislike'+(c.disliked?' active':'');
-    dislike.innerHTML='<span class="material-symbols-outlined">thumb_down</span><span>'+c.dislikes+'</span>';
-    dislike.onclick=()=>handleDislike(c.id);
-    const mention=document.createElement('button');
-    mention.className='commentAction';
-    mention.innerHTML='<span class="material-symbols-outlined">alternate_email</span><span>メンション</span>';
-    mention.onclick=()=>handleMention(c.id);
-    const reply=document.createElement('button');
-    reply.className='commentAction';
-    reply.innerHTML='<span class="material-symbols-outlined">reply</span><span>返信</span>';
-    reply.onclick=()=>setReplyTarget(c.id);
-    actions.append(like,dislike,mention,reply);
-    card.append(head,text,actions);
-    return card;
-  }
-  $id('cancelReplyBtn').onclick=()=>{
-    replyTarget=null;$id('replyTargetBar').classList.add('hidden');
-  };
-  $id('postCommentBtn').onclick=()=>{
-    const ta=$id('commentTextInput'),text=ta.value.trim();
-    if(!text){toast('コメント本文を入力してください。');ta.focus();return}
-    const author=($id('commentAuthorInput').value||'').trim()||'名無しさん';
-    commentsData.push({
-      id:Date.now(),parentId:replyTarget?replyTarget.id:null,author,text,time:nowString(),
-      likes:0,dislikes:0,liked:false,disliked:false
-    });
-    saveComments();ta.value='';replyTarget=null;$id('replyTargetBar').classList.add('hidden');renderComments();
-  };
-  renderComments();
-})();
+        window.setReplyTarget = function(id, author) {
+            const target = commentsData.find(c => c.id === id);
+            const parentId = target.parentId ? target.parentId : target.id;
 
-</script>
-<script data-pack="1" src="data-1.js"></script>
-<script data-pack="2" src="data-2.js"></script>
-<script data-pack="3" src="data-3.js"></script>
-<script data-pack="4" src="data-4.js"></script>
-<script data-pack="5" src="data-5.js"></script>
-<script data-pack="6" src="data-6.js"></script>
-<script data-pack="7" src="data-7.js"></script>
-<script data-pack="8" src="data-8.js"></script>
+            currentReplyTarget = { id: parentId, author };
+            replyTargetText.textContent = `@${author} へ返信中`;
+            replyTargetBar.classList.remove('hidden');
+
+            if (!commentTextInput.value.includes(`@${author}`)) {
+                commentTextInput.value = `@${author} ` + commentTextInput.value;
+            }
+            commentTextInput.focus();
+        };
+
+        cancelReplyBtn.addEventListener('click', () => {
+            currentReplyTarget = null;
+            replyTargetBar.classList.add('hidden');
+        });
+
+        postCommentBtn.addEventListener('click', () => {
+            const text = commentTextInput.value.trim();
+            if (!text) {
+                alert('コメント本文を入力してください');
+                return;
+            }
+
+            const author = commentAuthorInput.value.trim() || '名無しさん';
+            const now = new Date();
+            const timeStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+            const newComment = {
+                id: Date.now(),
+                parentId: currentReplyTarget ? currentReplyTarget.id : null,
+                author: author,
+                text: text,
+                time: timeStr,
+                likes: 0,
+                dislikes: 0
+            };
+
+            commentsData.push(newComment);
+            commentTextInput.value = '';
+            currentReplyTarget = null;
+            replyTargetBar.classList.add('hidden');
+            renderComments();
+        });
+
+        // ===== 手動データ読込・管理ロジック =====
+        loadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const parsed = JSON.parse(event.target.result);
+                    if (Array.isArray(parsed)) {
+                        dbData.push(...parsed);
+                    } else {
+                        dbData.push(parsed);
+                    }
+                    updateDbStats();
+                    performSearch();
+                } catch (err) {
+                    alert('JSONファイルの解析に失敗しました。');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            dbData = [];
+            updateDbStats();
+            resultsList.innerHTML = '<div style="text-align: center; color: var(--muted-color); padding: 40px 0;">データがクリアされました</div>';
+            resultCount.textContent = '---';
+            threadCount.textContent = '---';
+            searchTime.textContent = '---';
+        });
+
+        function updateDbStats() {
+            const totalThreads = dbData.length;
+            let totalResCount = 0;
+            dbData.forEach(t => {
+                if (t.responses) totalResCount += t.responses.length;
+            });
+
+            dbThreads.textContent = totalThreads.toLocaleString();
+            dbRes.textContent = totalResCount.toLocaleString();
+            if (totalThreads > 0) {
+                dbStatusNote.textContent = `データ読み込み完了 (${totalThreads.toLocaleString()} スレッド / ${totalResCount.toLocaleString()} レス)`;
+            } else {
+                dbStatusNote.textContent = 'データが読み込まれていません。';
+            }
+        }
+
+        // Search Execution
+        searchInput.addEventListener('input', performSearch);
+        sortOrder.addEventListener('change', performSearch);
+
+        function performSearch() {
+            const query = searchInput.value.trim();
+            if (!query || dbData.length === 0) {
+                resultsList.innerHTML = `<div style="text-align: center; color: var(--muted-color); padding: 40px 0;">
+                    ${dbData.length === 0 ? 'データがセットされていません' : '検索キーワードを入力してください'}
+                </div>`;
+                resultCount.textContent = '0';
+                threadCount.textContent = '0';
+                searchTime.textContent = '0.00';
+                return;
+            }
+
+            const startTime = performance.now();
+            const keywords = query.toLowerCase().split(/\s+/).filter(k => k);
+
+            let matchedResults = [];
+            let matchedThreadSet = new Set();
+
+            dbData.forEach((thread, tIdx) => {
+                const responses = thread.responses || [];
+                responses.forEach((res, rIdx) => {
+                    const text = ((res.body || '') + (thread.title || '')).toLowerCase();
+
+                    let isMatch = false;
+                    if (searchMode === 'and') {
+                        isMatch = keywords.every(kw => text.includes(kw));
+                    } else {
+                        isMatch = keywords.some(kw => text.includes(kw));
+                    }
+
+                    if (isMatch) {
+                        matchedResults.push({
+                            threadTitle: thread.title || '無題のスレッド',
+                            resNum: res.number || (rIdx + 1),
+                            name: res.name || '風吹けば名無し',
+                            date: res.date || '',
+                            body: res.body || '',
+                            id: `${tIdx}-${rIdx}`
+                        });
+                        matchedThreadSet.add(tIdx);
+                    }
+                });
+            });
+
+            // Sort
+            if (sortOrder.value === 'asc') {
+                matchedResults.reverse();
+            }
+
+            const endTime = performance.now();
+            const timeTaken = ((endTime - startTime) / 1000).toFixed(3);
+
+            // Update UI Stats
+            resultCount.textContent = matchedResults.length.toLocaleString();
+            threadCount.textContent = matchedThreadSet.size.toLocaleString();
+            searchTime.textContent = timeTaken;
+
+            // Render Results
+            renderResults(matchedResults, keywords);
+        }
+
+        function renderResults(results, keywords) {
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div style="text-align: center; color: var(--muted-color); padding: 40px 0;">該当するレスが見つかりませんでした</div>';
+                return;
+            }
+
+            resultsList.innerHTML = results.map(res => {
+                let highlightedBody = escapeHtml(res.body);
+                keywords.forEach(kw => {
+                    if (!kw) return;
+                    const reg = new RegExp(`(${escapeRegExp(kw)})`, 'gi');
+                    highlightedBody = highlightedBody.replace(reg, '<mark>$1</mark>');
+                });
+
+                return `
+                    <div class="result-card">
+                        <div class="thread-title">${escapeHtml(res.threadTitle)}</div>
+                        <div class="res-meta">${res.resNum} : ${escapeHtml(res.name)} ${escapeHtml(res.date)}</div>
+                        <div class="res-body">${highlightedBody}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // 初期化処理の実行
+        renderComments();
+        loadDataPacks();
+    </script>
 </body>
 </html>
