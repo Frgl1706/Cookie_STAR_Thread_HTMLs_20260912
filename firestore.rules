@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /comments/{commentId} {
+      // コメントは全員が閲覧可能。投稿・リアクションは匿名認証済みユーザーのみ。
+      allow read: if true;
+
+      function validParent() {
+        return request.resource.data.parentId == null
+          || (
+            request.resource.data.parentId is string
+            && exists(/databases/$(database)/documents/comments/$(request.resource.data.parentId))
+            && get(/databases/$(database)/documents/comments/$(request.resource.data.parentId)).data.parentId == null
+          );
+      }
+
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          'parentId', 'author', 'text', 'uid', 'createdAt',
+          'likes', 'dislikes', 'likedBy', 'dislikedBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'parentId', 'author', 'text', 'uid', 'createdAt',
+          'likes', 'dislikes', 'likedBy', 'dislikedBy'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.author is string
+        && request.resource.data.author.size() <= 20
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 1000
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.likes == 0
+        && request.resource.data.dislikes == 0
+        && request.resource.data.likedBy is map
+        && request.resource.data.dislikedBy is map
+        && request.resource.data.likedBy.keys().size() == 0
+        && request.resource.data.dislikedBy.keys().size() == 0
+        && validParent();
+
+      // 既存コメントの本文・投稿者・日時・親コメントは変更不可。
+      // 投票マップの変更は、ログイン中ユーザー自身のUIDキーだけに限定する。
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'likes', 'dislikes', 'likedBy', 'dislikedBy'
+        ])
+        && request.resource.data.likedBy is map
+        && request.resource.data.dislikedBy is map
+        && request.resource.data.likedBy.diff(resource.data.likedBy).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.dislikedBy.diff(resource.data.dislikedBy).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.likes == request.resource.data.likedBy.keys().size()
+        && request.resource.data.dislikes == request.resource.data.dislikedBy.keys().size();
+
+      // コメント削除はこのページからは提供しない。
+      allow delete: if false;
+    }
+  }
+}
