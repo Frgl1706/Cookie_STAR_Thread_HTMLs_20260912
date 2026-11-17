@@ -138,6 +138,8 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 .dialog-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .hidden{display:none!important}
 .loading-note{text-align:center;color:var(--muted);padding:40px 0}
+.comment-status{font-size:11px;line-height:1.5;color:var(--muted);margin-top:9px}
+#postCommentBtn:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:560px){
     .container{padding:12px}
     .top-status-bar{gap:10px}.status-metrics{gap:9px}.metric-item{font-size:13px}.metric-item span{font-size:18px}
@@ -295,8 +297,9 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
                 <button id="cancelReplyBtn" type="button"><span class="material-symbols-outlined">close</span></button>
             </div>
             <input type="text" id="commentAuthorInput" class="form-input-name" placeholder="お名前（空欄で「名無しさん」）" maxlength="20">
-            <textarea id="commentTextInput" class="form-textarea" placeholder="コメントを入力...（@ユーザー名 や >>番号 でメンション）"></textarea>
-            <div class="form-submit-row"><button id="postCommentBtn" class="btn btn-primary" type="button">投稿する</button></div>
+            <textarea id="commentTextInput" class="form-textarea" maxlength="1000" placeholder="コメントを入力...（@ユーザー名 や >>番号 でメンション）"></textarea>
+            <div class="form-submit-row"><button id="postCommentBtn" class="btn btn-primary" type="button" disabled>投稿する</button></div>
+            <p id="commentStatus" class="comment-status" role="status" aria-live="polite">Firebaseに接続する準備をしています...</p>
         </div>
         <div id="commentsList"></div>
     </div>
@@ -349,7 +352,14 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     </div>
 </dialog>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js";
+import {
+    getFirestore, collection, addDoc, doc, onSnapshot, orderBy, query,
+    runTransaction, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
+
 // ===== ここが修正ポイント =====
 // テンプレートリテラルに String.raw を付けることで、
 // 中の \n \s \d \/ などがそのままWorkerのソース文字列として渡される。
@@ -451,10 +461,8 @@ let worker=null;
 let workerFailed=false;
 try{ worker=new Worker(URL.createObjectURL(new Blob([WORKER_SOURCE],{type:'text/javascript'}))); }catch(err){ workerFailed=true; console.warn('[Cookie Search] Worker unavailable; main-thread fallback will be used.',err); }
 let dbReady=false,dbCount=0,dbThreadsCount=0,searchTimer=null,currentReplyTarget=null;
-let commentsData=[
- {id:1,parentId:null,author:'語録研究者',text:'本スレの過去ログ検索が快適で助かります！',time:'2026/09/18 10:15',likes:5,dislikes:0},
- {id:2,parentId:1,author:'名無しさん',text:'@語録研究者 本当に便利ですね。AND検索の挙動もスムーズです。',time:'2026/09/18 11:02',likes:2,dislikes:0}
-];
+let commentsData=[];
+let firestoreDb=null, commentsRef=null, currentUser=null, unsubscribeComments=null;
 const $=id=>document.getElementById(id),body=document.body;
 const searchInput=$('searchInput'),modeSlider=$('modeSlider'),resultsList=$('resultsList');
 const resultCount=$('resultCount'),threadCount=$('threadCount'),searchTime=$('searchTime'),loadingThreadCount=$('loadingThreadCount');
@@ -487,11 +495,149 @@ resultLimit.addEventListener('change',performSearch);sortOrder.addEventListener(
 $('darkBtn').addEventListener('click',()=>body.classList.toggle('dark'));
 $('helpBtn').addEventListener('click',()=>$('helpDialog').showModal());$('closeHelpBtn').addEventListener('click',()=>$('helpDialog').close());
 const navs=[$('navHomeTab'),$('navCommentsTab'),$('navSettingsTab')],tabs=[$('tabHome'),$('tabComments'),$('tabSettings')];function switchTab(i){navs.forEach((n,j)=>n.classList.toggle('active',j===i));tabs.forEach((t,j)=>t.classList.toggle('active',j===i));if(i===1)renderComments()}navs.forEach((n,i)=>n.addEventListener('click',()=>switchTab(i)));
-function renderComments(){const list=$('commentsList');list.innerHTML='';const parents=commentsData.filter(c=>c.parentId===null);if(!parents.length){list.innerHTML='<div class="loading-note">まだコメントはありません</div>';return}parents.forEach(c=>{list.appendChild(createCommentCard(c,false));commentsData.filter(x=>x.parentId===c.id).forEach(x=>list.appendChild(createCommentCard(x,true)))})}
-function createCommentCard(c,isReply){const card=document.createElement('div');card.className=`comment-card ${isReply?'reply-card':''}`;let t=escapeHtml(c.text).replace(/(@[^\s　]+)/g,'<span class="mention-tag">$1</span>').replace(/(>>\d+)/g,'<span class="mention-tag">$1</span>');card.innerHTML=`<div class="comment-header"><span class="comment-author">${escapeHtml(c.author)}</span><span>${escapeHtml(c.time)}</span></div><div class="comment-text">${t}</div><div class="comment-actions"><button class="action-btn like-btn"><span class="material-symbols-outlined">thumb_up</span><span>${c.likes}</span></button><button class="action-btn dislike-btn"><span class="material-symbols-outlined">thumb_down</span><span>${c.dislikes}</span></button><button class="action-btn"><span class="material-symbols-outlined">reply</span><span>返信</span></button></div>`;card.querySelector('.like-btn').onclick=()=>{c.likes++;renderComments()};card.querySelector('.dislike-btn').onclick=()=>{c.dislikes++;renderComments()};card.querySelector('.action-btn:last-child').onclick=()=>setReplyTarget(c.id,c.author);return card}
-function setReplyTarget(id,author){const t=commentsData.find(c=>c.id===id);currentReplyTarget={id:t.parentId||t.id,author};$('replyTargetText').textContent=`@${author} へ返信中`;$('replyTargetBar').classList.remove('hidden');const input=$('commentTextInput');if(!input.value.includes('@'+author))input.value='@'+author+' '+input.value;input.focus()}
-$('cancelReplyBtn').addEventListener('click',()=>{currentReplyTarget=null;$('replyTargetBar').classList.add('hidden')});
-$('postCommentBtn').addEventListener('click',()=>{const text=$('commentTextInput').value.trim();if(!text){alert('コメント本文を入力してください');return}const author=$('commentAuthorInput').value.trim()||'名無しさん',now=new Date(),time=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;commentsData.push({id:Date.now(),parentId:currentReplyTarget?currentReplyTarget.id:null,author,text,time,likes:0,dislikes:0});$('commentTextInput').value='';currentReplyTarget=null;$('replyTargetBar').classList.add('hidden');renderComments()});
+function formatCommentTime(timestamp){
+    const date = timestamp && typeof timestamp.toDate === 'function'
+        ? timestamp.toDate()
+        : (timestamp instanceof Date ? timestamp : new Date(timestamp || Date.now()));
+    if(Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('ja-JP', {
+        year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
+    }).format(date);
+}
+
+function renderComments(){
+    const list=$('commentsList');
+    list.innerHTML='';
+    const parents=commentsData.filter(c=>c.parentId===null || c.parentId===undefined);
+    if(!parents.length){
+        list.innerHTML='<div class="loading-note">まだコメントはありません</div>';
+        return;
+    }
+    parents.forEach(c=>{
+        list.appendChild(createCommentCard(c,false));
+        commentsData.filter(x=>x.parentId===c.id).forEach(x=>list.appendChild(createCommentCard(x,true)));
+    });
+}
+
+function createCommentCard(c,isReply){
+    const card=document.createElement('div');
+    card.className=`comment-card ${isReply?'reply-card':''}`;
+    const text=escapeHtml(c.text)
+        .replace(/(@[^\s　]+)/g,'<span class="mention-tag">$1</span>')
+        .replace(/(>>\d+)/g,'<span class="mention-tag">$1</span>');
+    const liked=Boolean(currentUser && c.likedBy && c.likedBy[currentUser.uid]);
+    const disliked=Boolean(currentUser && c.dislikedBy && c.dislikedBy[currentUser.uid]);
+    const likes=Number(c.likes)||0;
+    const dislikes=Number(c.dislikes)||0;
+    const time=c.time || formatCommentTime(c.createdAt);
+
+    card.innerHTML=`
+        <div class="comment-header"><span class="comment-author">${escapeHtml(c.author||'名無しさん')}</span><span>${escapeHtml(time)}</span></div>
+        <div class="comment-text">${text}</div>
+        <div class="comment-actions">
+            <button class="action-btn like-btn ${liked?'active':''}" type="button" data-reaction="like" aria-pressed="${liked}">
+                <span class="material-symbols-outlined">thumb_up</span><span>${likes}</span>
+            </button>
+            <button class="action-btn dislike-btn ${disliked?'active':''}" type="button" data-reaction="dislike" aria-pressed="${disliked}">
+                <span class="material-symbols-outlined">thumb_down</span><span>${dislikes}</span>
+            </button>
+            <button class="action-btn reply-btn" type="button">
+                <span class="material-symbols-outlined">reply</span><span>返信</span>
+            </button>
+        </div>`;
+
+    card.querySelector('[data-reaction="like"]').addEventListener('click',()=>toggleCommentReaction(c.id,'like'));
+    card.querySelector('[data-reaction="dislike"]').addEventListener('click',()=>toggleCommentReaction(c.id,'dislike'));
+    card.querySelector('.reply-btn').addEventListener('click',()=>setReplyTarget(c.id,c.author||'名無しさん'));
+    return card;
+}
+
+async function toggleCommentReaction(commentId,kind){
+    if(!firestoreDb || !currentUser) return;
+    const commentRef=doc(firestoreDb,'comments',commentId);
+    const uid=currentUser.uid;
+    try{
+        await runTransaction(firestoreDb,async transaction=>{
+            const snapshot=await transaction.get(commentRef);
+            if(!snapshot.exists()) throw new Error('対象のコメントが見つかりません。');
+            const data=snapshot.data();
+            const likedBy={...(data.likedBy||{})};
+            const dislikedBy={...(data.dislikedBy||{})};
+
+            if(kind==='like'){
+                if(likedBy[uid]) delete likedBy[uid];
+                else { likedBy[uid]=true; delete dislikedBy[uid]; }
+            }else{
+                if(dislikedBy[uid]) delete dislikedBy[uid];
+                else { dislikedBy[uid]=true; delete likedBy[uid]; }
+            }
+
+            transaction.update(commentRef,{
+                likedBy,
+                dislikedBy,
+                likes:Object.keys(likedBy).length,
+                dislikes:Object.keys(dislikedBy).length
+            });
+        });
+    }catch(error){
+        console.error('[Comments] Reaction update failed:',error);
+        setCommentStatus('リアクションを更新できませんでした。Firestoreのセキュリティルールを確認してください。',true);
+    }
+}
+
+function setReplyTarget(id,author){
+    const target=commentsData.find(c=>c.id===id);
+    if(!target) return;
+    // 返信への返信も、最上位コメントに紐付けて一段のスレッド表示にする。
+    currentReplyTarget={id:target.parentId||target.id,author};
+    $('replyTargetText').textContent=`@${author} へ返信中`;
+    $('replyTargetBar').classList.remove('hidden');
+    const input=$('commentTextInput');
+    if(!input.value.includes('@'+author)) input.value='@'+author+' '+input.value;
+    input.focus();
+}
+
+$('cancelReplyBtn').addEventListener('click',()=>{
+    currentReplyTarget=null;
+    $('replyTargetBar').classList.add('hidden');
+});
+$('postCommentBtn').addEventListener('click',async()=>{
+    const text=$('commentTextInput').value.trim();
+    if(!text){alert('コメント本文を入力してください');return;}
+    if(text.length>1000){alert('コメントは1,000文字以内で入力してください');return;}
+    if(!commentsRef || !currentUser){
+        setCommentStatus('Firebaseに接続されていないため投稿できません。設定を確認してください。',true);
+        return;
+    }
+
+    const author=$('commentAuthorInput').value.trim().slice(0,20)||'名無しさん';
+    const submitButton=$('postCommentBtn');
+    submitButton.disabled=true;
+    setCommentStatus('コメントを投稿しています...');
+    try{
+        await addDoc(commentsRef,{
+            parentId:currentReplyTarget?currentReplyTarget.id:null,
+            author,
+            text,
+            uid:currentUser.uid,
+            createdAt:serverTimestamp(),
+            likes:0,
+            dislikes:0,
+            likedBy:{},
+            dislikedBy:{}
+        });
+        $('commentTextInput').value='';
+        currentReplyTarget=null;
+        $('replyTargetBar').classList.add('hidden');
+        setCommentStatus('投稿しました。コメントはほかの閲覧者にもリアルタイムで表示されます。');
+    }catch(error){
+        console.error('[Comments] Post failed:',error);
+        setCommentStatus('投稿に失敗しました。Firebase設定・認証・Firestoreルールを確認してください。',true);
+        alert('コメントの投稿に失敗しました。Firebaseの設定とFirestoreセキュリティルールを確認してください。');
+    }finally{
+        submitButton.disabled=false;
+    }
+});
 $('loadBtn').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const parsed=JSON.parse(ev.target.result);worker.postMessage({type:'loadStructured',data:parsed});$('dbStatusNote').textContent='ローカルJSONを読み込み中…'}catch(err){alert('JSONファイルの解析に失敗しました。')}};reader.readAsText(file)});
 // ===== 内蔵データ8パックのロード =====
@@ -651,6 +797,103 @@ if(worker){
   };
 }
 
+// ===== Firebase コメント機能 =====
+// Firebase Console > プロジェクトの設定 > マイアプリ（ウェブアプリ）に表示される値を設定してください。
+const firebaseConfig={
+    apiKey:"YOUR_API_KEY",
+    authDomain:"YOUR_PROJECT_ID.firebaseapp.com",
+    projectId:"YOUR_PROJECT_ID",
+    storageBucket:"YOUR_PROJECT_ID.firebasestorage.app",
+    messagingSenderId:"YOUR_MESSAGING_SENDER_ID",
+    appId:"YOUR_APP_ID"
+};
+
+function setCommentStatus(message,isError=false){
+    const status=$('commentStatus');
+    if(!status) return;
+    status.textContent=message;
+    status.style.color=isError?'var(--danger)':'var(--muted)';
+}
+
+function setCommentFormEnabled(enabled){
+    $('postCommentBtn').disabled=!enabled;
+    $('commentAuthorInput').disabled=!enabled;
+    $('commentTextInput').disabled=!enabled;
+}
+
+async function initializeCommentService(){
+    const configured=Boolean(
+        firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('YOUR_') &&
+        firebaseConfig.projectId && !firebaseConfig.projectId.startsWith('YOUR_') &&
+        firebaseConfig.appId && !firebaseConfig.appId.startsWith('YOUR_')
+    );
+
+    if(!configured){
+        setCommentFormEnabled(false);
+        setCommentStatus('Firebase未設定です。HTML内の firebaseConfig を自分のFirebaseプロジェクトの値に置き換えてください。',true);
+        renderComments();
+        return;
+    }
+
+    try{
+        const app=initializeApp(firebaseConfig);
+        const auth=getAuth(app);
+        firestoreDb=getFirestore(app);
+
+        // 匿名認証を利用し、同じブラウザでは同じユーザーIDでリアクションを管理する。
+        currentUser=await new Promise((resolve,reject)=>{
+            let signInRequested=false;
+            let unsubscribeAuth=()=>{};
+            unsubscribeAuth=onAuthStateChanged(auth,user=>{
+                if(user){
+                    unsubscribeAuth();
+                    resolve(user);
+                    return;
+                }
+                if(!signInRequested){
+                    signInRequested=true;
+                    signInAnonymously(auth).catch(error=>{
+                        unsubscribeAuth();
+                        reject(error);
+                    });
+                }
+            });
+        });
+
+        commentsRef=collection(firestoreDb,'comments');
+        const commentsQuery=query(commentsRef,orderBy('createdAt','asc'));
+        onSnapshot(commentsQuery,snapshot=>{
+            commentsData=snapshot.docs.map(commentDoc=>{
+                const data=commentDoc.data();
+                return {
+                    id:commentDoc.id,
+                    ...data,
+                    parentId:data.parentId??null,
+                    author:data.author||'名無しさん',
+                    likes:Number(data.likes)||0,
+                    dislikes:Number(data.dislikes)||0,
+                    likedBy:data.likedBy||{},
+                    dislikedBy:data.dislikedBy||{},
+                    time:formatCommentTime(data.createdAt)
+                };
+            });
+            renderComments();
+            setCommentStatus(`Firebaseに接続中です。コメント ${commentsData.length.toLocaleString()} 件を同期しています。`);
+        },error=>{
+            console.error('[Comments] Realtime listener failed:',error);
+            setCommentStatus('コメントの読み込みに失敗しました。Firestoreの読み取りルールを確認してください。',true);
+        });
+
+        setCommentFormEnabled(true);
+        setCommentStatus('Firebaseに接続しました。コメントを投稿できます。');
+    }catch(error){
+        console.error('[Comments] Firebase initialization failed:',error);
+        setCommentFormEnabled(false);
+        setCommentStatus('Firebaseへの接続に失敗しました。API設定・匿名認証・Firestoreの設定を確認してください。',true);
+    }
+}
+
+initializeCommentService();
 renderComments();
 
 // data-1.js～data-8.jsはheadのscriptタグで既に評価済み。
